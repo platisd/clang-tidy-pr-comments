@@ -12,7 +12,7 @@ GP2D120::GP2D120(Runtime& runtime, uint8_t pin)
     , mRuntime(runtime)
 {
 }
-
+// Some comments
 unsigned int GP2D120::getDistance()
 {
     auto analogReading = mRuntime.getAnalogPinState(kPin);
