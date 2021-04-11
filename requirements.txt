@@ -1,2 +1,1 @@
-gensim>=3.8
-nltk>=3.5
+pyyaml>=5.4

@@ -1,7 +1,8 @@
-FROM python:3.7-slim-buster
+FROM ubuntu:20.04
+# FROM python:3.7-slim-buster
 
 RUN apt-get update
-RUN apt-get -y install jq
+RUN apt-get -y install clang-tidy-8 jq python3-pip
 
 COPY entrypoint.sh /action/entrypoint.sh
 COPY run_action.py /action/run_action.py

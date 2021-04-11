@@ -1,7 +1,7 @@
 #!/bin/bash
-set -eu
+set -xeu
 
-cat $GITHUB_EVENT_PATH
+# cat $GITHUB_EVENT_PATH
 
 pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then .issue.number else .number end')
 
@@ -10,11 +10,21 @@ if [ $pull_request_id == "null" ]; then
   exit 1
 fi
 
+repository_name=$(basename $GITHUB_REPOSITORY)
+recreated_runner_dir="/home/runner/work/$repository_name"
+mkdir -p $recreated_runner_dir
+recreated_repo_dir="$recreated_runner_dir/$repository_name"
+
+ln -s $(pwd) $recreated_repo_dir
+
+cd $recreated_repo_dir
+
 clang_fixes=$(pwd)/clang_fixes.yaml
 
-run-clang-tidy-8 -p=smartcar/test/build -j $(nproc) -header-filter=smartcar/src/* files smartcar/src/* -export-fixes $clang_fixes
+run-clang-tidy-8 -p=$(pwd)/test/build \
+    -j $(nproc) \
+    -header-filter=$(pwd)/src/* \
+    files $(pwd)/src/* \
+    -export-fixes $clang_fixes
 
-echo "------------------ clang fixes"
-cat $clang_fixes
-
-eval python3 /action/run_action.py
+eval python3 /action/run_action.py --clang-tidy-fixes $clang_fixes --pull-request-id $pull_request_id --repository-root $recreated_repo_dir

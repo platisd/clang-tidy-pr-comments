@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo apt-get install -y ${{ matrix.compiler.cc }}
           sudo apt-get install -y ${{ matrix.compiler.cxx }}
-          sudo apt-get install -y lcov clang-tidy-8
+          sudo apt-get install -y lcov
       - name: Build & run unit tests
         run: bash smartcar/test/build_and_run_ut.sh
       - name: Run clang-tidy-action
