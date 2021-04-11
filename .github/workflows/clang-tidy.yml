@@ -1,0 +1,29 @@
+name: clang-tidy
+
+on: [pull_request]
+
+jobs:
+  clang-tidy:
+    name: Run clang-tidy
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        compiler:
+          - cc: gcc-10
+            cxx: g++-10
+    env:
+      CC: ${{ matrix.compiler.cc }}
+      CXX: ${{ matrix.compiler.cxx }}
+
+    steps:
+      - name: Fetch sources
+        uses: actions/checkout@v2
+      - name: Get dependencies
+        run: |
+          sudo apt-get install -y ${{ matrix.compiler.cc }}
+          sudo apt-get install -y ${{ matrix.compiler.cxx }}
+          sudo apt-get install -y lcov clang-tidy-8
+      - name: Build & run unit tests
+        run: bash smartcar/test/build_and_run_ut.sh
+      - name: Run clang-tidy-action
+        uses: platisd/clang-tidy-action@master
