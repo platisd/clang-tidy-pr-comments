@@ -14,7 +14,7 @@ clang_fixes=$(pwd)/clang_fixes.yaml
 
 run-clang-tidy-8 -p=smartcar/test/build -j $(nproc) -header-filter=smartcar/src/* files smartcar/src/* -export-fixes $clang_fixes
 
-echo "------------------ clang fixes"
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!! clang fixes"
 cat $clang_fixes
 
 eval python3 /action/run_action.py
