@@ -10,6 +10,7 @@ import re
 import itertools
 import posixpath
 import time
+from string import Template
 
 
 def chunks(lst, n):
@@ -43,7 +44,9 @@ def main():
     repo = os.environ.get("GITHUB_REPOSITORY")
     github_token = os.environ.get("INPUT_GITHUB_TOKEN")
     review_event = (
-        "REQUEST_CHANGES" if os.environ.get("INPUT_REQUEST_CHANGES") == 1 else "COMMENT"
+        "REQUEST_CHANGES"
+        if os.environ.get("INPUT_REQUEST_CHANGES") == "true"
+        else "COMMENT"
     )
     github_api_url = os.environ.get("GITHUB_API_URL")
 
@@ -102,14 +105,32 @@ def main():
     clang_tidy_fixes_for_available_files = list()
     # Normalize paths
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
+        print(diagnostic)
+        print(diagnostic.keys())
         diagnostic["FilePath"] = diagnostic["FilePath"].replace(repository_root, "")
         diagnostic["FilePath"] = posixpath.normpath(diagnostic["FilePath"])
-        # Remove Replacements since we don't use them and cause problems when looking for duplicates
-        diagnostic.pop("Replacements", None)
-    # Remove duplicates
-    clang_tidy_fixes["Diagnostics"] = [
-        dict(t) for t in {tuple(d.items()) for d in clang_tidy_fixes["Diagnostics"]}
+        for replacement in diagnostic["Replacements"]:
+            replacement["FilePath"] = replacement["FilePath"].replace(
+                repository_root, ""
+            )
+            replacement["FilePath"] = posixpath.normpath(replacement["FilePath"])
+    # Mark duplicates (probably could be done in the previous loop)
+    unique_diagnostics = set()
+    for diagnostic in clang_tidy_fixes["Diagnostics"]:
+        unique_combo = (
+            diagnostic["DiagnosticName"],
+            diagnostic["FileOffset"],
+            diagnostic["FilePath"],
+        )
+        diagnostic["Duplicate"] = unique_combo in unique_diagnostics
+        unique_diagnostics.add(unique_combo)
+    # Remove the duplicates
+    clang_tidy_fixes["Diagnostics"][:] = [
+        diagnostic
+        for diagnostic in clang_tidy_fixes["Diagnostics"]
+        if not diagnostic["Duplicate"]
     ]
+
     # Remove entries we cannot comment on as the files weren't changed in this pull request
     clang_tidy_fixes["Diagnostics"] = [
         diagnostic
@@ -121,15 +142,33 @@ def main():
         print("No warnings found in lines changed in this pull request")
         return 0
 
+    # Create the review comments
     review_comments = list()
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
+        suggestions = ""
         with open(repository_root + diagnostic["FilePath"]) as source_file:
             character_counter = 0
             newlines_until_offset = 0
             for source_file_line in source_file:
                 character_counter += len(source_file_line)
-                newlines_until_offset += source_file_line.count("\n")
+                newlines_until_offset += 1
+                # Check if we have found the line with the warning
                 if character_counter >= diagnostic["FileOffset"]:
+                    beginning_of_line = character_counter - len(source_file_line)
+                    initial_line_length = len(source_file_line)
+                    current_offset = 0
+                    for replacement in diagnostic["Replacements"]:
+                        # The offset from the beginning of line until the warning
+                        warning_begin = replacement["Offset"] - beginning_of_line
+                        warning_end = warning_begin + replacement["Length"]
+                        source_file_line = (
+                            source_file_line[: warning_begin + current_offset]
+                            + replacement["ReplacementText"]
+                            + source_file_line[warning_end + current_offset :]
+                        )
+                        current_offset = len(source_file_line) - initial_line_length
+                    if len(diagnostic["Replacements"]) > 0:
+                        suggestions += "\n```suggestion\n" + source_file_line + "\n```"
                     break
             diagnostic["LineNumber"] = newlines_until_offset
         review_comment_body = (
@@ -137,6 +176,7 @@ def main():
             + diagnostic["DiagnosticName"]
             + "** :warning:\n"
             + diagnostic["Message"]
+            + suggestions
         )
         review_comments.append(
             {
@@ -149,7 +189,8 @@ def main():
 
     # Split the comments in chunks to avoid overloading the server
     # and getting 502 server errors as a response for large reviews
-    review_comments = list(chunks(review_comments, 10))
+    suggestions_per_comment = int(os.environ.get("INPUT_SUGGESTIONS_PER_COMMENT"))
+    review_comments = list(chunks(review_comments, suggestions_per_comment))
     total_reviews = len(review_comments)
     current_review = 1
     for comments_chunk in review_comments:
@@ -165,7 +206,7 @@ def main():
             repo,
             args.pull_request_id,
         )
-        post_pull_request_review_result = requests.post(
+        post_review_result = requests.post(
             pull_request_reviews_url,
             json={
                 "body": warning_comment,
@@ -178,13 +219,16 @@ def main():
             },
         )
 
-        if post_pull_request_review_result.status_code != requests.codes.ok:
-            print(
-                "Posting review comments failed with error code: "
-                + str(post_pull_request_review_result.status_code)
-            )
-            print(post_pull_request_review_result.text)
-            return 1
+        if post_review_result.status_code != requests.codes.ok:
+            print(post_review_result.text)
+            # Ignore bad gateway errors (false negatives?)
+            if post_review_result.status_code != requests.codes.bad_gateway:
+                print(
+                    "Posting review comments failed with error code: "
+                    + str(post_review_result.status_code)
+                )
+                print("Please report this error to the GitHub Action maintainer")
+                return 1
         # Wait before posting all chunks so to avoid triggering abuse detection
         time.sleep(10)
 

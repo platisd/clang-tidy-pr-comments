@@ -1,12 +1,18 @@
 name: 'Pull request comments from clang-tidy reports'
 description: 'Post clang-tidy warnings as review comments on pull requests'
 inputs:
-  github-token:
+  github_token:
     description: 'The GitHub token'
     required: true
-  clang-tidy-fixes:
+  clang_tidy_fixes:
     description: 'Path to the clang-tidy fixes YAML file'
     required: true
+  request_changes:
+    description: 'Request changes if there are clang-tidy issues (otherwise leave a comment)'
+    default: false
+  suggestions_per_comment:
+    description: 'The number of suggestions per comment (smaller numbers work better for heavy pull requests)'
+    default: 10
 
 runs:
   using: 'docker'

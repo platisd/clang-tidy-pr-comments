@@ -19,12 +19,4 @@ ln -s $(pwd) $recreated_repo_dir
 
 cd $recreated_repo_dir
 
-clang_fixes=$(pwd)/clang_fixes.yaml
-
-run-clang-tidy-8 -p=$(pwd)/test/build \
-    -j $(nproc) \
-    -header-filter=$(pwd)/src/* \
-    files $(pwd)/src/* \
-    -export-fixes $clang_fixes
-
-eval python3 /action/run_action.py --clang-tidy-fixes $clang_fixes --pull-request-id $pull_request_id --repository-root $recreated_repo_dir
+eval python3 /action/run_action.py --clang-tidy-fixes $INPUT_CLANG_TIDY_FIXES --pull-request-id $pull_request_id --repository-root $recreated_repo_dir
