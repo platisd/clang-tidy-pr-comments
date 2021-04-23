@@ -1,8 +1,11 @@
-name: 'Duplicate code detection tool'
-description: 'Detect similarities between source code files'
+name: 'Pull request comments from clang-tidy reports'
+description: 'Post clang-tidy warnings as review comments on pull requests'
 inputs:
-  github_token:
+  github-token:
     description: 'The GitHub token'
+    required: true
+  clang-tidy-fixes:
+    description: 'Path to the clang-tidy fixes YAML file'
     required: true
 
 runs:

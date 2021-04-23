@@ -21,7 +21,7 @@ def chunks(lst, n):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Duplicate code detection action runner"
+        description="Pull request comments from clang-tidy reports action runner"
     )
     parser.add_argument(
         "--clang-tidy-fixes",
@@ -99,7 +99,6 @@ def main():
         clang_tidy_fixes = yaml.full_load(file)
 
     repository_root = args.repository_root + "/"
-    # repository_root = "/home/dimitris/projects/smartcar_shield/"
     clang_tidy_fixes_for_available_files = list()
     # Normalize paths
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
