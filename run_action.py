@@ -198,7 +198,10 @@ def main():
                         )
                         current_offset = len(source_file_line) - initial_line_length
                     if len(diagnostic["DiagnosticMessage"]["Replacements"]) > 0:
-                        suggestions += "\n```suggestion\n" + source_file_line + "\n```"
+                        # Make sure the code suggestion ends with a newline character
+                        if source_file_line[-1] != "\n":
+                            source_file_line += "\n"
+                        suggestions += "\n```suggestion\n" + source_file_line + "```"
                     break
             diagnostic["LineNumber"] = newlines_until_offset
         # Ignore comments on lines that were not changed in the pull request
