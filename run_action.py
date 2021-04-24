@@ -101,7 +101,11 @@ def main():
     with open(args.clang_tidy_fixes) as file:
         clang_tidy_fixes = yaml.full_load(file)
 
-    if len(clang_tidy_fixes["Diagnostics"]) == 0:
+    if (
+        clang_tidy_fixes is None
+        or "Diagnostics" not in clang_tidy_fixes.keys()
+        or len(clang_tidy_fixes["Diagnostics"]) == 0
+    ):
         print("No warnings found by clang-tidy")
         return 0
 
