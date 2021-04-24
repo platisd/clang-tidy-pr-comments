@@ -1,14 +1,12 @@
-FROM ubuntu:20.04
-# FROM python:3.7-slim-buster
+FROM python:3.8-slim-buster
 
 RUN apt-get update
-RUN apt-get -y install clang-tidy-8 jq python3-pip
+RUN apt-get -y install jq
 
 COPY entrypoint.sh /action/entrypoint.sh
 COPY run_action.py /action/run_action.py
 COPY requirements.txt /action/requirements.txt
 
 RUN pip3 install -r /action/requirements.txt
-RUN pip3 install requests
 
 ENTRYPOINT ["/action/entrypoint.sh"]
