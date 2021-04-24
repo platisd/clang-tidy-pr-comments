@@ -101,15 +101,37 @@ def main():
     with open(args.clang_tidy_fixes) as file:
         clang_tidy_fixes = yaml.full_load(file)
 
+    if len(clang_tidy_fixes["Diagnostics"]) == 0:
+        print("No warnings found by clang-tidy")
+        return 0
+
+    # If we have a clang-tidy-8 format, then upconvert it to the clang-tidy-9 one
+    if "DiagnosticMessage" not in clang_tidy_fixes["Diagnostics"][0].keys():
+        clang_tidy_fixes["Diagnostics"][:] = [
+            {
+                "DiagnosticName": d["DiagnosticName"],
+                "DiagnosticMessage": {
+                    "FileOffset": d["FileOffset"],
+                    "FilePath": d["FilePath"],
+                    "Message": d["Message"],
+                    "Replacements": d["Replacements"],
+                },
+            }
+            for d in clang_tidy_fixes["Diagnostics"]
+        ]
+
     repository_root = args.repository_root + "/"
     clang_tidy_fixes_for_available_files = list()
     # Normalize paths
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
-        print(diagnostic)
-        print(diagnostic.keys())
-        diagnostic["FilePath"] = diagnostic["FilePath"].replace(repository_root, "")
-        diagnostic["FilePath"] = posixpath.normpath(diagnostic["FilePath"])
-        for replacement in diagnostic["Replacements"]:
+        # diagnostic = d["DiagnosticMessage"] if "DiagnosticMessage" in d.keys() else d
+        diagnostic["DiagnosticMessage"]["FilePath"] = diagnostic["DiagnosticMessage"][
+            "FilePath"
+        ].replace(repository_root, "")
+        diagnostic["DiagnosticMessage"]["FilePath"] = posixpath.normpath(
+            diagnostic["DiagnosticMessage"]["FilePath"]
+        )
+        for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
             replacement["FilePath"] = replacement["FilePath"].replace(
                 repository_root, ""
             )
@@ -117,10 +139,11 @@ def main():
     # Mark duplicates (probably could be done in the previous loop)
     unique_diagnostics = set()
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
+        # diagnostic = d["DiagnosticMessage"] if "DiagnosticMessage" in d.keys() else d
         unique_combo = (
             diagnostic["DiagnosticName"],
-            diagnostic["FileOffset"],
-            diagnostic["FilePath"],
+            diagnostic["DiagnosticMessage"]["FileOffset"],
+            diagnostic["DiagnosticMessage"]["FilePath"],
         )
         diagnostic["Duplicate"] = unique_combo in unique_diagnostics
         unique_diagnostics.add(unique_combo)
@@ -132,32 +155,35 @@ def main():
     ]
 
     # Remove entries we cannot comment on as the files weren't changed in this pull request
-    clang_tidy_fixes["Diagnostics"] = [
+    clang_tidy_fixes["Diagnostics"][:] = [
         diagnostic
         for diagnostic in clang_tidy_fixes["Diagnostics"]
-        if diagnostic["FilePath"] in files_and_lines_available_for_comments.keys()
+        if diagnostic["DiagnosticMessage"]["FilePath"]
+        in files_and_lines_available_for_comments.keys()
     ]
 
     if len(clang_tidy_fixes["Diagnostics"]) == 0:
-        print("No warnings found in lines changed in this pull request")
+        print("No warnings found in files changed in this pull request")
         return 0
 
     # Create the review comments
     review_comments = list()
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
         suggestions = ""
-        with open(repository_root + diagnostic["FilePath"]) as source_file:
+        with open(
+            repository_root + diagnostic["DiagnosticMessage"]["FilePath"]
+        ) as source_file:
             character_counter = 0
             newlines_until_offset = 0
             for source_file_line in source_file:
                 character_counter += len(source_file_line)
                 newlines_until_offset += 1
                 # Check if we have found the line with the warning
-                if character_counter >= diagnostic["FileOffset"]:
+                if character_counter >= diagnostic["DiagnosticMessage"]["FileOffset"]:
                     beginning_of_line = character_counter - len(source_file_line)
                     initial_line_length = len(source_file_line)
                     current_offset = 0
-                    for replacement in diagnostic["Replacements"]:
+                    for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
                         # The offset from the beginning of line until the warning
                         warning_begin = replacement["Offset"] - beginning_of_line
                         warning_end = warning_begin + replacement["Length"]
@@ -167,25 +193,34 @@ def main():
                             + source_file_line[warning_end + current_offset :]
                         )
                         current_offset = len(source_file_line) - initial_line_length
-                    if len(diagnostic["Replacements"]) > 0:
+                    if len(diagnostic["DiagnosticMessage"]["Replacements"]) > 0:
                         suggestions += "\n```suggestion\n" + source_file_line + "\n```"
                     break
             diagnostic["LineNumber"] = newlines_until_offset
-        review_comment_body = (
-            ":warning: **"
-            + diagnostic["DiagnosticName"]
-            + "** :warning:\n"
-            + diagnostic["Message"]
-            + suggestions
-        )
-        review_comments.append(
-            {
-                "path": diagnostic["FilePath"],
-                "line": diagnostic["LineNumber"],
-                "side": "RIGHT",
-                "body": review_comment_body,
-            }
-        )
+        # Ignore comments on lines that were not changed in the pull request
+        line_number = diagnostic["LineNumber"]
+        file_path = diagnostic["DiagnosticMessage"]["FilePath"]
+        changed_lines = files_and_lines_available_for_comments[file_path]
+        if line_number in changed_lines:
+            review_comment_body = (
+                ":warning: **"
+                + diagnostic["DiagnosticName"]
+                + "** :warning:\n"
+                + diagnostic["DiagnosticMessage"]["Message"]
+                + suggestions
+            )
+            review_comments.append(
+                {
+                    "path": file_path,
+                    "line": line_number,
+                    "side": "RIGHT",
+                    "body": review_comment_body,
+                }
+            )
+
+    if len(review_comments) == 0:
+        print("Warnings found but none in lines changed by this pull request.")
+        return 0
 
     # Split the comments in chunks to avoid overloading the server
     # and getting 502 server errors as a response for large reviews
