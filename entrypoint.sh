@@ -1,8 +1,6 @@
 #!/bin/bash
 set -xeu
 
-# cat $GITHUB_EVENT_PATH
-
 pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then .issue.number else .number end')
 
 if [ $pull_request_id == "null" ]; then
