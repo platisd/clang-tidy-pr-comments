@@ -235,7 +235,7 @@ def main():
     for comments_chunk in review_comments:
         warning_comment = (
             ":warning: "
-            "`clang-tidy` found several problems with your code (%i/%i)"
+            "`clang-tidy` found issue(s) with the introduced code (%i/%i)"
             % (current_review, total_reviews)
         )
         current_review += 1
