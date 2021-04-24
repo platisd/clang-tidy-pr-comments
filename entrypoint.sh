@@ -5,7 +5,7 @@ pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then
 
 if [ $pull_request_id == "null" ]; then
   echo "Could not find a pull request ID. Is this a pull request?"
-  exit 1
+  exit 0
 fi
 
 repository_name=$(basename $GITHUB_REPOSITORY)
