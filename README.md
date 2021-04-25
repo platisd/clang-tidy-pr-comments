@@ -20,7 +20,11 @@ misconfigured by you, due to a bug (please contact me if that's the case) or the
 
 Please note the following:
 * It will **not** run `clang-tidy` for you. You are responsible for doing that and then
-  supply the Action with the path to your generated report (see examples below).
+  supply the Action with the path to your generated report (see examples below).<br>
+  Specifically, the YAML report that includes the *fixes* is generated via the `-export-fixes` argument
+  to the `run-clang-tidy` utility script. Alternatively, you may use `--export-fixes` with `clang-tidy`
+  itself and then, in both cases, specify the path where you would like the report to be exported.<br>
+  The very same path should be supplied to the GitHub Action.
 * It will *only* comment on files and lines changed in the pull request. This is due to GitHub not allowing
   comments on other files outside the pull request `diff`.
   This means that there may be more warnings in your project. Make sure you fix
