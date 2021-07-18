@@ -268,6 +268,7 @@ def main():
                 lambda review_comment: not (
                     review_comment["path"] == comment["path"] and
                     review_comment["line"] == comment["line"] and
+                    review_comment["side"] == comment["side"] and
                     review_comment["body"] == comment["body"]
                 ),
                 review_comments,
