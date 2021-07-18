@@ -7,6 +7,9 @@ inputs:
   clang_tidy_fixes:
     description: 'Path to the clang-tidy fixes YAML file'
     required: true
+  pull_request_id:
+    description: 'Pull request id (otherwise attempt to extract it from the GitHub metadata)'
+    default: ''
   request_changes:
     description: 'Request changes if there are clang-tidy issues (otherwise leave a comment)'
     default: false
