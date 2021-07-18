@@ -232,7 +232,7 @@ def main():
     # Load the existing review comments
     existing_pull_request_comments = []
     # Request a maximum of 100 pages (3000 comments)
-    for page_num in range(1, 100):
+    for page_num in range(1, 101):
         pull_request_comments_url = "%s/repos/%s/pulls/%s/comments?page=%d" % (
             github_api_url,
             repo,
