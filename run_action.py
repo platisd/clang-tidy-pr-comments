@@ -229,6 +229,55 @@ def main():
         print("Warnings found but none in lines changed by this pull request.")
         return 0
 
+    # Load the existing review comments
+    existing_pull_request_comments = []
+    # Request a maximum of 100 pages (3000 comments)
+    for page_num in range(1, 100):
+        pull_request_comments_url = "%s/repos/%s/pulls/%s/comments?page=%d" % (
+            github_api_url,
+            repo,
+            args.pull_request_id,
+            page_num,
+        )
+        pull_request_comments_result = requests.get(
+            pull_request_comments_url,
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": "token %s" % github_token,
+            },
+        )
+
+        if pull_request_comments_result.status_code != requests.codes.ok:
+            print(
+                "Request to get pull request comments failed with error code: "
+                + str(pull_request_comments_result.status_code)
+            )
+            return 1
+
+        pull_request_comments = json.loads(pull_request_comments_result.text)
+
+        if len(pull_request_comments) == 0 :
+            break
+
+        existing_pull_request_comments = existing_pull_request_comments + pull_request_comments
+
+    # Exclude already posted comments
+    for comment in existing_pull_request_comments:
+        review_comments = list(
+            filter(
+                lambda review_comment: not (
+                    review_comment["path"] == comment["path"] and
+                    review_comment["line"] == comment["line"] and
+                    review_comment["body"] == comment["body"]
+                ),
+                review_comments,
+            )
+        )
+
+    if len(review_comments) == 0:
+        print("No new warnings found for this pull request.")
+        return 0
+
     # Split the comments in chunks to avoid overloading the server
     # and getting 502 server errors as a response for large reviews
     suggestions_per_comment = int(os.environ.get("INPUT_SUGGESTIONS_PER_COMMENT"))

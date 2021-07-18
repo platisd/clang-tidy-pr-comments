@@ -29,10 +29,7 @@ Please note the following:
   comments on other files outside the pull request `diff`.
   This means that there may be more warnings in your project. Make sure you fix
   them *before* starting to use this Action to ensure new warnings will not be introduced in the future.
-* Having the Action leave comments on every update of the pull request may result in spam. Specifically,
-  *existing* comments are **not** taken into consideration and will be *repeated* every time the Action is triggered,
-  as long as the violation has not been amended.
-  If you see this becoming an issue, consider triggering it manually with a comment instead (see example below).
+* This Action *respects* existing comments and doesn't repeat the same warnings for the same line (no spam).
 
 ### Supported clang-tidy versions
 
