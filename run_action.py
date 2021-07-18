@@ -256,10 +256,10 @@ def main():
 
         pull_request_comments = json.loads(pull_request_comments_result.text)
 
-        if len(pull_request_comments) == 0 :
+        if len(pull_request_comments) == 0:
             break
 
-        existing_pull_request_comments = existing_pull_request_comments + pull_request_comments
+        existing_pull_request_comments += pull_request_comments
 
     # Exclude already posted comments
     for comment in existing_pull_request_comments:
