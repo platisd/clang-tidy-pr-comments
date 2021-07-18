@@ -108,6 +108,38 @@ jobs:
           clang_tidy_fixes: fixes.yaml
 ```
 
+If you want to trigger the Action using the `workflow_run` event to run analysis on pull requests
+from forks in a
+[secure manner](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/),
+then you can try the following:
+
+```yaml
+name: Post static analysis results
+
+on:
+  workflow_run:
+    # Workflow that should provide the results of the analysis via artifact
+    workflows: [ "Static analysis" ]
+    types: [ completed ]
+
+jobs:
+  clang-tidy-results:
+    # Trigger the job only if previous workflow completed successfully
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-20.04
+    steps:
+      #
+      # In the previous steps you will need to download and extract the artifact with the
+      # fixes.yaml file and set the pr_id environment variable to the pull request id
+      #
+      - name: Run clang-tidy-pr-comments action
+        uses: platisd/clang-tidy-pr-comments@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          clang_tidy_fixes: fixes.yaml
+          pull_request_id: ${{ env.pr_id }}
+```
+
 
 [clang-tidy-8 support]: https://img.shields.io/badge/clang--tidy-8-green
 [clang-tidy-9 support]: https://img.shields.io/badge/clang--tidy-9-green
