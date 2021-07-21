@@ -50,27 +50,36 @@ def main():
     )
     github_api_url = os.environ.get("GITHUB_API_URL")
 
-    pull_files_url = "%s/repos/%s/pulls/%s/files" % (
-        github_api_url,
-        repo,
-        args.pull_request_id,
-    )
-    pull_files_result = requests.get(
-        pull_files_url,
-        headers={
-            "Accept": "application/vnd.github.v3+json",
-            "Authorization": "token %s" % github_token,
-        },
-    )
-
-    if pull_files_result.status_code != requests.codes.ok:
-        print(
-            "Request to get list of files failed with error code: "
-            + str(pull_files_result.status_code)
+    pull_request_files = []
+    # Request a maximum of 100 pages (3000 files)
+    for page_num in range(1, 101):
+        pull_files_url = "%s/repos/%s/pulls/%s/files?page=%d" % (
+            github_api_url,
+            repo,
+            args.pull_request_id,
+            page_num,
         )
-        return 1
+        pull_files_result = requests.get(
+            pull_files_url,
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": "token %s" % github_token,
+            },
+        )
 
-    pull_request_files = json.loads(pull_files_result.text)
+        if pull_files_result.status_code != requests.codes.ok:
+            print(
+                "Request to get list of files failed with error code: "
+                + str(pull_files_result.status_code)
+            )
+            return 1
+
+        pull_files_chunk = json.loads(pull_files_result.text)
+
+        if len(pull_files_chunk) == 0:
+            break
+
+        pull_request_files += pull_files_chunk
 
     files_and_lines_available_for_comments = dict()
     for pull_request_file in pull_request_files:
@@ -238,33 +247,33 @@ def main():
     existing_pull_request_comments = []
     # Request a maximum of 100 pages (3000 comments)
     for page_num in range(1, 101):
-        pull_request_comments_url = "%s/repos/%s/pulls/%s/comments?page=%d" % (
+        pull_comments_url = "%s/repos/%s/pulls/%s/comments?page=%d" % (
             github_api_url,
             repo,
             args.pull_request_id,
             page_num,
         )
-        pull_request_comments_result = requests.get(
-            pull_request_comments_url,
+        pull_comments_result = requests.get(
+            pull_comments_url,
             headers={
                 "Accept": "application/vnd.github.v3+json",
                 "Authorization": "token %s" % github_token,
             },
         )
 
-        if pull_request_comments_result.status_code != requests.codes.ok:
+        if pull_comments_result.status_code != requests.codes.ok:
             print(
                 "Request to get pull request comments failed with error code: "
-                + str(pull_request_comments_result.status_code)
+                + str(pull_comments_result.status_code)
             )
             return 1
 
-        pull_request_comments = json.loads(pull_request_comments_result.text)
+        pull_comments_chunk = json.loads(pull_comments_result.text)
 
-        if len(pull_request_comments) == 0:
+        if len(pull_comments_chunk) == 0:
             break
 
-        existing_pull_request_comments += pull_request_comments
+        existing_pull_request_comments += pull_comments_chunk
 
     # Exclude already posted comments
     for comment in existing_pull_request_comments:
