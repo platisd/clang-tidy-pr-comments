@@ -74,6 +74,11 @@ def main():
 
     files_and_lines_available_for_comments = dict()
     for pull_request_file in pull_request_files:
+        # Not all PR file metadata entries may contain a patch section
+        # For example, entries related to removed binary files may not contain it
+        if "patch" not in pull_request_file:
+            continue
+
         git_line_tags = re.findall(r"@@.*?@@", pull_request_file["patch"])
         # The result is something like ['@@ -101,8 +102,11 @@', '@@ -123,9 +127,7 @@']
         # We need to get it to a state like this: ['102,11', '127,7']
