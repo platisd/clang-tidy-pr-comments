@@ -31,7 +31,10 @@ def main():
         help="The path to the clang-tidy fixes YAML",
     )
     parser.add_argument(
-        "--pull-request-id", type=str, required=True, help="The pull request ID"
+        "--pull-request-id",
+        type=int,
+        required=True,
+        help="The pull request ID",
     )
     parser.add_argument(
         "--repository-root",
@@ -53,7 +56,7 @@ def main():
     pull_request_files = []
     # Request a maximum of 100 pages (3000 files)
     for page_num in range(1, 101):
-        pull_files_url = "%s/repos/%s/pulls/%s/files?page=%d" % (
+        pull_files_url = "%s/repos/%s/pulls/%d/files?page=%d" % (
             github_api_url,
             repo,
             args.pull_request_id,
@@ -247,7 +250,7 @@ def main():
     existing_pull_request_comments = []
     # Request a maximum of 100 pages (3000 comments)
     for page_num in range(1, 101):
-        pull_comments_url = "%s/repos/%s/pulls/%s/comments?page=%d" % (
+        pull_comments_url = "%s/repos/%s/pulls/%d/comments?page=%d" % (
             github_api_url,
             repo,
             args.pull_request_id,
@@ -307,7 +310,7 @@ def main():
         )
         current_review += 1
 
-        pull_request_reviews_url = "%s/repos/%s/pulls/%s/reviews" % (
+        pull_request_reviews_url = "%s/repos/%s/pulls/%d/reviews" % (
             github_api_url,
             repo,
             args.pull_request_id,
