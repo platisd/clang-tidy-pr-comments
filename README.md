@@ -31,6 +31,10 @@ Please note the following:
   This means that there may be more warnings in your project. Make sure you fix them *before* starting to
   use this Action to ensure new warnings will not be introduced in the future.
 * This Action *respects* existing comments and doesn't repeat the same warnings for the same line (no spam).
+* This Action allows analysis to be performed *separately* from the posting of the analysis results (using
+  separate workflows with different privileges), which
+  [allows you to safely analyze pull requests from forks](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
+  (see examples below).
 
 ### Supported clang-tidy versions
 
