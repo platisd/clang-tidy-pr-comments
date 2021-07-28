@@ -19,18 +19,31 @@ leave a comment without blocking the pull request from being merged. It should f
 misconfigured by you, due to a bug (please contact me if that's the case) or the GitHub API acting up.
 
 Please note the following:
+
 * It will **not** run `clang-tidy` for you. You are responsible for doing that and then
-  supply the Action with the path to your generated report (see examples below).<br>
-  Specifically, a YAML report that includes *fixes* for the pull request can be generated using
-  the `clang-tidy-diff.py` script with the `-export-fixes` argument. This script usually comes
-  with the `clang-tidy` packages. Alternatively, you may use `--export-fixes` with `clang-tidy`
-  itself and then, in both cases, specify the path where you would like the report to be exported.<br>
-  The very same path should be supplied to the GitHub Action.
+  supply the Action with the path to your generated report (see examples below). You can generate a
+  YAML report that includes *fixes* for a pull request using the following methods:
+
+  * Using the `run-clang-tidy` utility script with the `-export-fixes` argument. This script usually
+    comes with the `clang-tidy` packages. You can use it to run checks *for the entire codebase* of a
+    project at once.
+
+  * Using the `clang-tidy-diff` utility script with the `-export-fixes` argument. This script also usually
+    comes with the `clang-tidy` packages, and and it can be used to run checks only for code fragments that
+    *have been changed* in a specific pull request.
+
+  * Alternatively, you may use `--export-fixes` with `clang-tidy` itself in your own script.
+
+  In any case, specify the path where you would like the report to be exported. The very same path should
+  be supplied to this Action.
+
 * It will *only* comment on files and lines changed in the pull request. This is due to GitHub not allowing
   comments on other files outside the pull request `diff`.
   This means that there may be more warnings in your project. Make sure you fix them *before* starting to
   use this Action to ensure new warnings will not be introduced in the future.
+
 * This Action *respects* existing comments and doesn't repeat the same warnings for the same line (no spam).
+
 * This Action allows analysis to be performed *separately* from the posting of the analysis results (using
   separate workflows with different privileges), which
   [allows you to safely analyze pull requests from forks](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
