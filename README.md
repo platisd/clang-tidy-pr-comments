@@ -91,6 +91,7 @@ jobs:
       run: |
         git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
+      # Don't run this Action if fixes.yml doesn't exist - clang-tidy may not generate it in some cases
       if: ${{ hashFiles( 'clang-tidy-result/fixes.yml' ) != '' }}
       uses: platisd/clang-tidy-pr-comments@master
       with:
@@ -137,6 +138,7 @@ jobs:
       run: |
         git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
+      # Don't run this Action if fixes.yml doesn't exist - clang-tidy may not generate it in some cases
       if: ${{ hashFiles( 'clang-tidy-result/fixes.yml' ) != '' }}
       uses: platisd/clang-tidy-pr-comments@master
       with:
@@ -256,6 +258,7 @@ jobs:
         mkdir clang-tidy-result
         unzip clang-tidy-result.zip -d clang-tidy-result
     - name: Run clang-tidy-pr-comments action
+      # Don't run this Action if fixes.yml doesn't exist - clang-tidy may not generate it in some cases
       if: ${{ hashFiles( 'clang-tidy-result/fixes.yml' ) != '' }}
       uses: platisd/clang-tidy-pr-comments@master
       with:
