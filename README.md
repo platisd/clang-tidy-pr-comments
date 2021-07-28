@@ -5,6 +5,15 @@ A GitHub Action to post `clang-tidy` warnings and suggestions as review comments
 
 ![action preview](https://i.imgur.com/lQiFdT9.png)
 
+## Table of contents
+
+* [What](#what)
+  * [Supported clang-tidy versions](#supported-clang-tidy-versions)
+* [How](#how)
+  * [Basic configuration example](#basic-configuration-example)
+  * [Triggering this Action manually](#triggering-this-action-manually)
+  * [Using this Action to safely perform analysis of pull requests from forks](#using-this-action-to-safely-perform-analysis-of-pull-requests-from-forks)
+
 ## What
 
 `platisd/clang-tidy-pr-comments` is a GitHub Action that utilizes the *exported fixes* of
@@ -20,8 +29,8 @@ misconfigured by you, due to a bug (please contact me if that's the case) or the
 
 Please note the following:
 
-* It will **not** run `clang-tidy` for you. You are responsible for doing that and then
-  supply the Action with the path to your generated report (see examples below). You can generate a
+* It will **not** run `clang-tidy` for you. You are responsible for doing that and then supply the Action with
+  the path to your generated report (see [examples](#how) below). You can generate a
   YAML report that includes *fixes* for a pull request using the following methods:
 
   * Using the `run-clang-tidy` utility script with the `-export-fixes` argument. This script usually
@@ -47,7 +56,7 @@ Please note the following:
 * This Action allows analysis to be performed *separately* from the posting of the analysis results (using
   separate workflows with different privileges), which
   [allows you to safely analyze pull requests from forks](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)
-  (see examples below).
+  (see [example](#using-this-action-to-safely-perform-analysis-of-pull-requests-from-forks) below).
 
 ### Supported clang-tidy versions
 
@@ -63,6 +72,8 @@ YAML files containing generated fixes by the following `clang-tidy` versions are
 Since this action comments on files changed in pull requests, naturally, it can be only run
 on `pull_request` events. That being said, if it happens to be triggered in a different context,
 e.g. a `push` event, it will **not** run and fail *softly* by returning a *success* code.
+
+### Basic configuration example
 
 A basic configuration for the `platisd/clang-tidy-pr-comments` action (for a `CMake`-based project
 using the `clang-tidy-diff.py` script) can be seen below:
@@ -108,7 +119,9 @@ jobs:
         suggestions_per_comment: 10
 ```
 
-If you want to trigger the Action manually, i.e. by leaving a comment with a particular *keyword*
+### Triggering this Action manually
+
+If you want to trigger this Action manually, i.e. by leaving a comment with a particular *keyword*
 in the pull request, then you can try the following:
 
 ```yaml
@@ -145,6 +158,8 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         clang_tidy_fixes: clang-tidy-result/fixes.yml
 ```
+
+### Using this Action to safely perform analysis of pull requests from forks
 
 If you want to trigger the Action using the `workflow_run` event to run analysis on pull requests
 from forks in a
