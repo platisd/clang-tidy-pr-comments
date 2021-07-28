@@ -5,7 +5,7 @@ if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
   pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then .issue.number else .number end')
 
   if [ "$pull_request_id" == "null" ]; then
-    echo "Could not find a pull request ID. Is this a pull request?"
+    echo "Could not find the pull request ID. Is this a pull request?"
     exit 0
   fi
 else
@@ -20,6 +20,11 @@ recreated_repo_dir="$recreated_runner_dir/$repository_name"
 ln -s "$(pwd)" "$recreated_repo_dir"
 
 cd "$recreated_repo_dir"
+
+if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
+  echo "Could not find the clang-tidy fixes file. Perhaps it wasn't created?"
+  exit 0
+fi
 
 eval python3 /action/run_action.py \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
