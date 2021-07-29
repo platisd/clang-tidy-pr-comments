@@ -3,7 +3,7 @@
 set -eu
 
 if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
-  pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then .issue.number else .number end')
+  pull_request_id="$(jq "if (.issue.number != null) then .issue.number else .number end" < "$GITHUB_EVENT_PATH")"
 
   if [ "$pull_request_id" == "null" ]; then
     echo "Could not find the pull request ID. Is this a pull request?"
