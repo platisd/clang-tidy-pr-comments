@@ -1,5 +1,6 @@
 #!/bin/bash
-set -xeu
+
+set -eu
 
 if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
   pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then .issue.number else .number end')
