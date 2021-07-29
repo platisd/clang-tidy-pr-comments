@@ -27,7 +27,7 @@ if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
   exit 0
 fi
 
-eval python3 /action/run_action.py \
+python3 /action/run_action.py \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
   --pull-request-id "$pull_request_id" \
   --repository-root "$recreated_repo_dir"
