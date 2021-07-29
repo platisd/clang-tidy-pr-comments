@@ -22,7 +22,7 @@ ln -s "$(pwd)" "$recreated_repo_dir"
 cd "$recreated_repo_dir"
 
 if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
-  echo "Could not find the clang-tidy fixes file. Perhaps it wasn't created?"
+  echo "Could not find the clang-tidy fixes file '$INPUT_CLANG_TIDY_FIXES'. Perhaps it wasn't created?"
   exit 0
 fi
 
