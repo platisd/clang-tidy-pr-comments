@@ -3,7 +3,7 @@
 set -eu
 
 if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
-  pull_request_id=$(cat "$GITHUB_EVENT_PATH" | jq 'if (.issue.number != null) then .issue.number else .number end')
+  pull_request_id="$(jq "if (.issue.number != null) then .issue.number else .number end" < "$GITHUB_EVENT_PATH")"
 
   if [ "$pull_request_id" == "null" ]; then
     echo "Could not find the pull request ID. Is this a pull request?"
@@ -27,7 +27,7 @@ if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
   exit 0
 fi
 
-eval python3 /action/run_action.py \
+/action/run_action.py \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
   --pull-request-id "$pull_request_id" \
   --repository-root "$recreated_repo_dir"
