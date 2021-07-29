@@ -76,7 +76,7 @@ e.g. a `push` event, it will **not** run and fail *softly* by returning a *succe
 ### Basic configuration example
 
 A basic configuration for the `platisd/clang-tidy-pr-comments` action (for a `CMake`-based project
-using the `clang-tidy-diff.py` script) can be seen below:
+using the `clang-tidy-diff` script) can be seen below:
 
 ```yaml
 name: Static analysis
@@ -102,8 +102,6 @@ jobs:
       run: |
         git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
-      # Don't run this Action if fixes.yml doesn't exist - clang-tidy may not generate it in some cases
-      if: ${{ hashFiles( 'clang-tidy-result/fixes.yml' ) != '' }}
       uses: platisd/clang-tidy-pr-comments@master
       with:
         # The GitHub token (or a personal access token)
@@ -151,8 +149,6 @@ jobs:
       run: |
         git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
-      # Don't run this Action if fixes.yml doesn't exist - clang-tidy may not generate it in some cases
-      if: ${{ hashFiles( 'clang-tidy-result/fixes.yml' ) != '' }}
       uses: platisd/clang-tidy-pr-comments@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -161,7 +157,7 @@ jobs:
 
 ### Using this Action to safely perform analysis of pull requests from forks
 
-If you want to trigger the Action using the `workflow_run` event to run analysis on pull requests
+If you want to trigger this Action using the `workflow_run` event to run analysis on pull requests
 from forks in a
 [secure manner](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/),
 then you can use the following combination of workflows:
@@ -273,8 +269,6 @@ jobs:
         mkdir clang-tidy-result
         unzip clang-tidy-result.zip -d clang-tidy-result
     - name: Run clang-tidy-pr-comments action
-      # Don't run this Action if fixes.yml doesn't exist - clang-tidy may not generate it in some cases
-      if: ${{ hashFiles( 'clang-tidy-result/fixes.yml' ) != '' }}
       uses: platisd/clang-tidy-pr-comments@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
