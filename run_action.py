@@ -151,7 +151,6 @@ def main():
         ]
 
     repository_root = args.repository_root + "/"
-    clang_tidy_fixes_for_available_files = list()
     # Normalize paths
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
         # diagnostic = d["DiagnosticMessage"] if "DiagnosticMessage" in d.keys() else d
