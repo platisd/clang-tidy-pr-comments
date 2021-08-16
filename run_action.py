@@ -10,7 +10,6 @@ import re
 import itertools
 import posixpath
 import time
-from string import Template
 
 
 def chunks(lst, n):
