@@ -21,10 +21,32 @@ def chunks(lst, n):
 
 
 def markdown(s):
-    # Escape markdown characters
     md_chars = "\\`*_{}[]<>()#+-.!|"
-    for ch in md_chars:
-        s = s.replace(ch, "\\" + ch)
+
+
+    def escape_chars(s):
+        for ch in md_chars:
+            s = s.replace(ch, "\\" + ch)
+
+        return s
+
+
+    def unescape_chars(s):
+        for ch in md_chars:
+            s = s.replace("\\" + ch, ch)
+
+        return s
+
+
+    # Escape markdown characters
+    s = escape_chars(s)
+    # Decorate quoted symbols as code
+    s = re.sub(
+        "'([^']*)'",
+        lambda match:
+            "`` " + unescape_chars(match.group(1)) + " ``",
+        s
+    )
 
     return s
 
