@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import json
-import requests
 import argparse
-import yaml
-import re
 import itertools
+import json
+import os
 import posixpath
+import re
+import sys
 import time
+
+import requests
+import yaml
 
 
 def chunks(lst, n):
