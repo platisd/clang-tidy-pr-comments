@@ -20,6 +20,15 @@ def chunks(lst, n):
         yield lst[i : i + n]
 
 
+def markdown(s):
+    # Escape markdown characters
+    md_chars = "\\`*_{}[]<>()#+-.!|"
+    for ch in md_chars:
+        s = s.replace(ch, "\\" + ch)
+
+    return s
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Pull request comments from clang-tidy reports action runner"
@@ -228,9 +237,9 @@ def main():
         if line_number in changed_lines:
             review_comment_body = (
                 ":warning: **"
-                + diagnostic["DiagnosticName"]
+                + markdown(diagnostic["DiagnosticName"])
                 + "** :warning:\n"
-                + diagnostic["DiagnosticMessage"]["Message"]
+                + markdown(diagnostic["DiagnosticMessage"]["Message"])
                 + suggestions
             )
             review_comments.append(
