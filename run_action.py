@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
-import sys
-import os
-import json
-import requests
 import argparse
-import yaml
-import re
 import itertools
+import json
+import os
 import posixpath
+import re
+import sys
 import time
-from string import Template
+
+import requests
+import yaml
 
 
 def chunks(lst, n):
@@ -18,6 +18,37 @@ def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
+
+
+def markdown(s):
+    md_chars = "\\`*_{}[]<>()#+-.!|"
+
+
+    def escape_chars(s):
+        for ch in md_chars:
+            s = s.replace(ch, "\\" + ch)
+
+        return s
+
+
+    def unescape_chars(s):
+        for ch in md_chars:
+            s = s.replace("\\" + ch, ch)
+
+        return s
+
+
+    # Escape markdown characters
+    s = escape_chars(s)
+    # Decorate quoted symbols as code
+    s = re.sub(
+        "'([^']*)'",
+        lambda match:
+            "`` " + unescape_chars(match.group(1)) + " ``",
+        s
+    )
+
+    return s
 
 
 def main():
@@ -142,7 +173,6 @@ def main():
         ]
 
     repository_root = args.repository_root + "/"
-    clang_tidy_fixes_for_available_files = list()
     # Normalize paths
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
         # diagnostic = d["DiagnosticMessage"] if "DiagnosticMessage" in d.keys() else d
@@ -228,9 +258,9 @@ def main():
         if line_number in changed_lines:
             review_comment_body = (
                 ":warning: **"
-                + diagnostic["DiagnosticName"]
+                + markdown(diagnostic["DiagnosticName"])
                 + "** :warning:\n"
-                + diagnostic["DiagnosticMessage"]["Message"]
+                + markdown(diagnostic["DiagnosticMessage"]["Message"])
                 + suggestions
             )
             review_comments.append(
