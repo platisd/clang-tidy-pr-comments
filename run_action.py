@@ -252,7 +252,7 @@ def main():
                 character_counter += len(source_file_line)
                 newlines_until_offset += 1
                 # Check if we have found the line with the warning
-                if character_counter >= diagnostic["FileOffset"]:
+                if character_counter > diagnostic["FileOffset"]:
                     beginning_of_line = character_counter - len(source_file_line)
                     if "ReplacementText" in diagnostic:
                         # The offset from the beginning of line until the warning
