@@ -84,7 +84,7 @@ def main():
     )
     github_api_url = os.environ.get("GITHUB_API_URL")
 
-    pull_request_files = []
+    pull_request_files = list()
     # Request a maximum of 100 pages (3000 files)
     for page_num in range(1, 101):
         pull_files_url = "%s/repos/%s/pulls/%d/files?page=%d" % (
@@ -113,7 +113,7 @@ def main():
         if len(pull_files_chunk) == 0:
             break
 
-        pull_request_files += pull_files_chunk
+        pull_request_files.extend(pull_files_chunk)
 
     files_and_lines_available_for_comments = dict()
     for pull_request_file in pull_request_files:
@@ -295,7 +295,7 @@ def main():
         return 0
 
     # Load the existing review comments
-    existing_pull_request_comments = []
+    existing_pull_request_comments = list()
     # Request a maximum of 100 pages (3000 comments)
     for page_num in range(1, 101):
         pull_comments_url = "%s/repos/%s/pulls/%d/comments?page=%d" % (
@@ -324,7 +324,7 @@ def main():
         if len(pull_comments_chunk) == 0:
             break
 
-        existing_pull_request_comments += pull_comments_chunk
+        existing_pull_request_comments.extend(pull_comments_chunk)
 
     # Exclude already posted comments
     for comment in existing_pull_request_comments:
