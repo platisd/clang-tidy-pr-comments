@@ -256,12 +256,12 @@ def main():
                     beginning_of_line = character_counter - len(source_file_line)
                     if "ReplacementText" in diagnostic:
                         # The offset from the beginning of line until the warning
-                        warning_begin = diagnostic["FileOffset"] - beginning_of_line
-                        warning_end = warning_begin + diagnostic["ReplacementLength"]
+                        replacement_begin = diagnostic["FileOffset"] - beginning_of_line
+                        replacement_end = replacement_begin + diagnostic["ReplacementLength"]
                         source_file_line = (
-                            source_file_line[: warning_begin]
+                            source_file_line[: replacement_begin]
                             + diagnostic["ReplacementText"]
-                            + source_file_line[warning_end :]
+                            + source_file_line[replacement_end :]
                         )
                         # Make sure the code suggestion ends with a newline character
                         if source_file_line[-1] != "\n":
