@@ -266,7 +266,7 @@ def main():
                         # Make sure the code suggestion ends with a newline character
                         if source_file_line[-1] != "\n":
                             source_file_line += "\n"
-                        suggestion += "\n```suggestion\n" + source_file_line + "```"
+                        suggestion = "\n```suggestion\n" + source_file_line + "```"
                     break
             diagnostic["LineNumber"] = newlines_until_offset
         # Ignore comments on lines that were not changed in the pull request
