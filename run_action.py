@@ -242,36 +242,34 @@ def main():
     # Create the review comments
     review_comments = list()
     for diagnostic in clang_tidy_diagnostics:
+        file_path = diagnostic["FilePath"]
+        line_number = 0
         suggestion = ""
         with open(
-            repository_root + diagnostic["FilePath"]
+            repository_root + file_path
         ) as source_file:
             character_counter = 0
-            newlines_until_offset = 0
             for source_file_line in source_file:
                 character_counter += len(source_file_line)
-                newlines_until_offset += 1
+                line_number += 1
                 # Check if we have found the line with the warning
                 if character_counter > diagnostic["FileOffset"]:
                     beginning_of_line = character_counter - len(source_file_line)
                     if "ReplacementText" in diagnostic:
                         # The offset from the beginning of line until the warning
-                        warning_begin = diagnostic["FileOffset"] - beginning_of_line
-                        warning_end = warning_begin + diagnostic["ReplacementLength"]
+                        replacement_begin = diagnostic["FileOffset"] - beginning_of_line
+                        replacement_end = replacement_begin + diagnostic["ReplacementLength"]
                         source_file_line = (
-                            source_file_line[: warning_begin]
+                            source_file_line[: replacement_begin]
                             + diagnostic["ReplacementText"]
-                            + source_file_line[warning_end :]
+                            + source_file_line[replacement_end :]
                         )
                         # Make sure the code suggestion ends with a newline character
                         if source_file_line[-1] != "\n":
                             source_file_line += "\n"
-                        suggestion += "\n```suggestion\n" + source_file_line + "```"
+                        suggestion = "\n```suggestion\n" + source_file_line + "```"
                     break
-            diagnostic["LineNumber"] = newlines_until_offset
         # Ignore comments on lines that were not changed in the pull request
-        line_number = diagnostic["LineNumber"]
-        file_path = diagnostic["FilePath"]
         changed_lines = files_and_lines_available_for_comments[file_path]
         if line_number in changed_lines:
             review_comment_body = (
