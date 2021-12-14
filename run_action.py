@@ -51,6 +51,16 @@ def markdown(s):
     return s
 
 
+def get_lines(change):
+    split_change = change.split(",")
+    start = int(split_change[0])
+    if len(split_change) > 1:
+        size = int(split_change[1])
+    else:
+        size = 1
+    return list(range(start, start + size))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Pull request comments from clang-tidy reports action runner"
@@ -130,12 +140,7 @@ def main():
             for line_tag in git_line_tags
         ]
         lines_available_for_comments = [
-            list(
-                range(
-                    int(change.split(",")[0]),
-                    int(change.split(",")[0]) + int(change.split(",")[1]),
-                )
-            )
+            get_lines(change)
             for change in lines_and_changes
         ]
         lines_available_for_comments = list(
