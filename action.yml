@@ -9,13 +9,16 @@ inputs:
     required: true
   pull_request_id:
     description: 'Pull request id (otherwise attempt to extract it from the GitHub metadata)'
+    required: false
     default: ''
   request_changes:
     description: 'Request changes if there are clang-tidy issues (otherwise leave a comment)'
-    default: false
+    required: false
+    default: 'false'
   suggestions_per_comment:
     description: 'The number of suggestions per comment (smaller numbers work better for heavy pull requests)'
-    default: 10
+    required: false
+    default: '10'
 
 runs:
   using: 'docker'
