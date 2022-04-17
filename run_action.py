@@ -270,7 +270,7 @@ def main():
                             + source_file_line[replacement_end :]
                         )
                         # Make sure the code suggestion ends with a newline character
-                        if source_file_line[-1] != "\n":
+                        if not source_file_line or source_file_line[-1] != "\n":
                             source_file_line += "\n"
                         suggestion = "\n```suggestion\n" + source_file_line + "```"
                     break
