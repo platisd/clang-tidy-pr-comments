@@ -94,7 +94,7 @@ def main():
     )
     github_api_url = os.environ.get("GITHUB_API_URL")
 
-    pull_request_files = list()
+    pull_request_files = []
     # Request a maximum of 100 pages (3000 files)
     for page_num in range(1, 101):
         pull_files_url = "%s/repos/%s/pulls/%d/files?page=%d" % (
@@ -125,7 +125,7 @@ def main():
 
         pull_request_files.extend(pull_files_chunk)
 
-    files_and_lines_available_for_comments = dict()
+    files_and_lines_available_for_comments = {}
     for pull_request_file in pull_request_files:
         # Not all PR file metadata entries may contain a patch section
         # For example, entries related to removed binary files may not contain it
@@ -150,7 +150,7 @@ def main():
             pull_request_file["filename"]
         ] = lines_available_for_comments
 
-    clang_tidy_fixes = dict()
+    clang_tidy_fixes = {}
     with open(args.clang_tidy_fixes) as file:
         clang_tidy_fixes = yaml.full_load(file)
 
@@ -192,7 +192,7 @@ def main():
             )
             replacement["FilePath"] = posixpath.normpath(replacement["FilePath"])
     # Create a separate diagnostic entry for each replacement entry, if any
-    clang_tidy_diagnostics = list()
+    clang_tidy_diagnostics = []
     for diagnostic in clang_tidy_fixes["Diagnostics"]:
         if not diagnostic["DiagnosticMessage"]["Replacements"]:
             clang_tidy_diagnostics.append(
@@ -245,7 +245,7 @@ def main():
         return 0
 
     # Create the review comments
-    review_comments = list()
+    review_comments = []
     for diagnostic in clang_tidy_diagnostics:
         file_path = diagnostic["FilePath"]
         line_number = 0
@@ -298,7 +298,7 @@ def main():
         return 0
 
     # Load the existing review comments
-    existing_pull_request_comments = list()
+    existing_pull_request_comments = []
     # Request a maximum of 100 pages (3000 comments)
     for page_num in range(1, 101):
         pull_comments_url = "%s/repos/%s/pulls/%d/comments?page=%d" % (
