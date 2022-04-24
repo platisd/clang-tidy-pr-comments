@@ -14,7 +14,7 @@ else
 fi
 
 repository_name="$(basename "$GITHUB_REPOSITORY")"
-recreated_runner_dir="/home/runner/work/$repository_name"
+recreated_runner_dir="$INPUT_REPO_PATH_PREFIX/$repository_name"
 mkdir -p "$recreated_runner_dir"
 recreated_repo_dir="$recreated_runner_dir/$repository_name"
 

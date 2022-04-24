@@ -19,6 +19,10 @@ inputs:
     description: 'The number of suggestions per comment (smaller numbers work better for heavy pull requests)'
     required: false
     default: '10'
+  repo_path_prefix:
+    description: 'The path to repo when code is analyzed with clang-tidy; may set to "/__w" for users who run clang-tidy in a docker container'
+    required: false
+    default: '/home/runner/work'
 
 runs:
   using: 'docker'
