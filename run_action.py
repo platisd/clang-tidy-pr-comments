@@ -132,7 +132,7 @@ def main():
         if "patch" not in pull_request_file:
             continue
 
-        git_line_tags = re.findall(r"@@.*?@@", pull_request_file["patch"])
+        git_line_tags = re.findall(r"^@@ -.*? +.*? @@", pull_request_file["patch"])
         # The result is something like ['@@ -101,8 +102,11 @@', '@@ -123,9 +127,7 @@']
         # We need to get it to a state like this: ['102,11', '127,7']
         lines_and_changes = [
