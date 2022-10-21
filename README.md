@@ -1,12 +1,12 @@
 # clang-tidy pull request comments
 
-[![Clang-Tidy 8 support](https://img.shields.io/badge/clang--tidy-8-brightgreen)](https://releases.llvm.org/8.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
-[![Clang-Tidy 9 support](https://img.shields.io/badge/clang--tidy-9-brightgreen)](https://releases.llvm.org/9.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
-[![Clang-Tidy 10 support](https://img.shields.io/badge/clang--tidy-10-brightgreen)](https://releases.llvm.org/10.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
-[![Clang-Tidy 11 support](https://img.shields.io/badge/clang--tidy-11-brightgreen)](https://releases.llvm.org/11.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
-[![Clang-Tidy 12 support](https://img.shields.io/badge/clang--tidy-12-brightgreen)](https://releases.llvm.org/12.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
-[![Clang-Tidy 13 support](https://img.shields.io/badge/clang--tidy-13-brightgreen)](https://releases.llvm.org/13.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
-[![Clang-Tidy 14 support](https://img.shields.io/badge/clang--tidy-14-brightgreen)](https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-8 support]](https://releases.llvm.org/8.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-9 support]](https://releases.llvm.org/9.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-10 support]](https://releases.llvm.org/10.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-11 support]](https://releases.llvm.org/11.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-12 support]](https://releases.llvm.org/12.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-13 support]](https://releases.llvm.org/13.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-14 support]](https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
 
 A GitHub Action to post `clang-tidy` warnings and suggestions as review comments on your pull request.
 
@@ -73,6 +73,8 @@ YAML files containing generated fixes by the following `clang-tidy` versions are
 * `clang-tidy-10`
 * `clang-tidy-11`
 * `clang-tidy-12`
+* `clang-tidy-13`
+* `clang-tidy-14`
 
 ## How
 
@@ -294,3 +296,5 @@ jobs:
 [clang-tidy-10 support]: https://img.shields.io/badge/clang--tidy-10-green
 [clang-tidy-11 support]: https://img.shields.io/badge/clang--tidy-11-green
 [clang-tidy-12 support]: https://img.shields.io/badge/clang--tidy-12-green
+[clang-tidy-13 support]: https://img.shields.io/badge/clang--tidy-13-green
+[clang-tidy-14 support]: https://img.shields.io/badge/clang--tidy-14-green
