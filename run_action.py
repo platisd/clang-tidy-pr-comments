@@ -151,8 +151,7 @@ def main():
         ] = lines_available_for_comments
 
     clang_tidy_fixes = {}
-    # Apparently Clang-Tidy doesn't support multibyte encodings and measures offsets in bytes
-    with open(args.clang_tidy_fixes, encoding="latin_1") as file:
+    with open(args.clang_tidy_fixes, encoding="utf_8") as file:
         clang_tidy_fixes = yaml.full_load(file)
 
     if (
