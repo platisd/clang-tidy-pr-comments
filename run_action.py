@@ -151,7 +151,7 @@ def main():
         ] = lines_available_for_comments
 
     clang_tidy_fixes = {}
-    with open(args.clang_tidy_fixes) as file:
+    with open(args.clang_tidy_fixes, encoding="utf_8") as file:
         clang_tidy_fixes = yaml.full_load(file)
 
     if (
@@ -250,9 +250,8 @@ def main():
         file_path = diagnostic["FilePath"]
         line_number = 0
         suggestion = ""
-        with open(
-            repository_root + file_path
-        ) as source_file:
+        # Apparently Clang-Tidy measures offsets in bytes, not in symbols, so Latin-1 should be used
+        with open(repository_root + file_path, encoding="latin_1") as source_file:
             character_counter = 0
             for source_file_line in source_file:
                 character_counter += len(source_file_line)
