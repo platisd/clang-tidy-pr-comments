@@ -152,7 +152,7 @@ def main():
 
     clang_tidy_fixes = {}
     with open(args.clang_tidy_fixes, encoding="utf_8") as file:
-        clang_tidy_fixes = yaml.full_load(file)
+        clang_tidy_fixes = yaml.safe_load(file)
 
     if (
         clang_tidy_fixes is None
