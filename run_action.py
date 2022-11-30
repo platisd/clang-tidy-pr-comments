@@ -248,34 +248,31 @@ def main():
     review_comments = []
     for diagnostic in clang_tidy_diagnostics:
         file_path = diagnostic["FilePath"]
-        line_number = 0
-        suggestion = ""
         # Apparently Clang-Tidy doesn't support multibyte encodings and measures offsets in bytes
-        with open(repository_root + file_path, encoding="latin_1") as source_file:
-            character_counter = 0
-            for source_file_line in source_file:
-                character_counter += len(source_file_line)
-                line_number += 1
-                # Check if we have found the line with the warning
-                if character_counter > diagnostic["FileOffset"]:
-                    beginning_of_line = character_counter - len(source_file_line)
-                    if "ReplacementText" in diagnostic:
-                        # The offset from the beginning of line until the warning
-                        replacement_begin = diagnostic["FileOffset"] - beginning_of_line
-                        replacement_end = replacement_begin + diagnostic["ReplacementLength"]
-                        source_file_line = (
-                            source_file_line[: replacement_begin]
-                            + diagnostic["ReplacementText"]
-                            + source_file_line[replacement_end :]
-                        )
-                        # Make sure the code suggestion ends with a newline character
-                        if not source_file_line or source_file_line[-1] != "\n":
-                            source_file_line += "\n"
-                        suggestion = "\n```suggestion\n" + source_file_line + "```"
-                    break
+        with open(repository_root + file_path, encoding="latin_1") as f:
+            source_file = f.read()
+        
+        suggestion_begin = diagnostic["FileOffset"]
+        suggestion_end = suggestion_begin + diagnostic["ReplacementLength"]
+        start_line_number = source_file[: suggestion_begin].count("\n") + 1
+        finish_line_number = source_file[: suggestion_end].count("\n") + 1
+
+        # We know exactly what we want to replace, however our GitHub suggestion needs to
+        # replace the entire lines, from the first to the last
+        lines_to_replace_begin = source_file.rfind("\n", 0, suggestion_begin) + 1
+        lines_to_replace_end = source_file.find("\n", suggestion_end)
+        source_file_line = source_file[lines_to_replace_begin:suggestion_begin] \
+            + diagnostic["ReplacementText"] \
+            + source_file[suggestion_end:lines_to_replace_end]
+
+        # Make sure the code suggestion ends with a newline character
+        if not source_file_line or source_file_line[-1] != "\n":
+            source_file_line += "\n"
+        suggestion = "\n```suggestion\n" + source_file_line + "```"
+
         # Ignore comments on lines that were not changed in the pull request
         changed_lines = files_and_lines_available_for_comments[file_path]
-        if line_number in changed_lines:
+        if start_line_number in changed_lines:  # The finish line may be outside the changed lines
             review_comment_body = (
                 ":warning: **"
                 + markdown(diagnostic["DiagnosticName"])
@@ -286,11 +283,16 @@ def main():
             review_comments.append(
                 {
                     "path": file_path,
-                    "line": line_number,
+                    "line": finish_line_number,
                     "side": "RIGHT",
                     "body": review_comment_body,
                 }
             )
+            # The start line number should be added only when needed or GitHub complains
+            if start_line_number < finish_line_number:
+                review_comments[-1]["start_line"] = start_line_number
+                review_comments[-1]["start_side"] = "RIGHT"
+
 
     if len(review_comments) == 0:
         print("Warnings found but none in lines changed by this pull request.")
