@@ -260,27 +260,32 @@ def main():
     review_comments = []
     for diagnostic in clang_tidy_diagnostics:
         file_path = diagnostic["FilePath"]
+
         # Apparently Clang-Tidy doesn't support multibyte encodings and measures offsets in bytes
         with open(repository_root + file_path, encoding="latin_1") as f:
             source_file = f.read()
-        
         suggestion_begin = diagnostic["FileOffset"]
-        suggestion_end = suggestion_begin + diagnostic["ReplacementLength"]
         start_line_number = source_file[: suggestion_begin].count("\n") + 1
-        finish_line_number = source_file[: suggestion_end].count("\n") + 1
+        # Compose code suggestion/replacement (if available)
+        if "ReplacementText" not in diagnostic.keys():
+            suggestion = ""
+            finish_line_number = start_line_number
+        else:
+            suggestion_end = suggestion_begin + diagnostic["ReplacementLength"]
+            finish_line_number = source_file[: suggestion_end].count("\n") + 1
 
-        # We know exactly what we want to replace, however our GitHub suggestion needs to
-        # replace the entire lines, from the first to the last
-        lines_to_replace_begin = source_file.rfind("\n", 0, suggestion_begin) + 1
-        lines_to_replace_end = source_file.find("\n", suggestion_end)
-        source_file_line = source_file[lines_to_replace_begin:suggestion_begin] \
-            + diagnostic["ReplacementText"] \
-            + source_file[suggestion_end:lines_to_replace_end]
+            # We know exactly what we want to replace, however our GitHub suggestion needs to
+            # replace the entire lines, from the first to the last
+            lines_to_replace_begin = source_file.rfind("\n", 0, suggestion_begin) + 1
+            lines_to_replace_end = source_file.find("\n", suggestion_end)
+            source_file_line = source_file[lines_to_replace_begin:suggestion_begin] \
+                + diagnostic["ReplacementText"] \
+                + source_file[suggestion_end:lines_to_replace_end]
 
-        # Make sure the code suggestion ends with a newline character
-        if not source_file_line or source_file_line[-1] != "\n":
-            source_file_line += "\n"
-        suggestion = "\n```suggestion\n" + source_file_line + "```"
+            # Make sure the code suggestion ends with a newline character
+            if not source_file_line or source_file_line[-1] != "\n":
+                source_file_line += "\n"
+            suggestion = "\n```suggestion\n" + source_file_line + "```"
 
         # Ignore comments on lines that were not changed in the pull request
         changed_lines = files_and_lines_available_for_comments[file_path]
