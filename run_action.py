@@ -204,29 +204,54 @@ def main():
                 }
             )
         else:
-            # If there are multiple replacements then they need to be applied all at once,
-            # therefore we need to merge them all into a single suggestion
-            file_paths = []
-            file_offsets = []
-            replacement_lengths = []
-            replacement_texts = []
-            for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
-                file_paths.append(replacement["FilePath"])
-                file_offsets.append(replacement["Offset"])
-                replacement_lengths.append(replacement["Length"])
-                replacement_texts.append(replacement["ReplacementText"])
+            # If there are multiple replacements we need to determine whether they are consecutive.
+            # If they are, then they need to be applied all at once, therefore we need to merge
+            # them all into a single suggestion
+            # If not, then we need to create a separate suggestion for each replacement
+            # Check if the replacements are consecutive
+            replacements_are_consecutive = True
+            for i in range(len(diagnostic["DiagnosticMessage"]["Replacements"]) - 1):
+                current_offset = diagnostic["DiagnosticMessage"]["Replacements"][i]["Offset"]
+                current_length = diagnostic["DiagnosticMessage"]["Replacements"][i]["Length"]
+                next_offset = diagnostic["DiagnosticMessage"]["Replacements"][i + 1]["Offset"]
+                if (current_offset + current_length < next_offset - 1):
+                    replacements_are_consecutive = False
+                    break
 
-            assert all(path == file_paths[0] for path in file_paths)
-            clang_tidy_diagnostics.append(
-                {
-                    "DiagnosticName": diagnostic["DiagnosticName"],
-                    "Message": diagnostic["DiagnosticMessage"]["Message"],
-                    "FilePath": file_paths[0],
-                    "FileOffset": file_offsets[0],  # Start from the first replacement
-                    "ReplacementText": "".join(replacement_texts),  # Concatenate all replacement texts
-                    "ReplacementLength": sum(replacement_lengths),  # Sum all replacement lengths
-                }
-            )
+            if replacements_are_consecutive:
+                file_paths = []
+                file_offsets = []
+                replacement_lengths = []
+                replacement_texts = []
+                for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
+                    file_paths.append(replacement["FilePath"])
+                    file_offsets.append(replacement["Offset"])
+                    replacement_lengths.append(replacement["Length"])
+                    replacement_texts.append(replacement["ReplacementText"])
+
+                assert all(path == file_paths[0] for path in file_paths)
+                clang_tidy_diagnostics.append(
+                    {
+                        "DiagnosticName": diagnostic["DiagnosticName"],
+                        "Message": diagnostic["DiagnosticMessage"]["Message"],
+                        "FilePath": file_paths[0],
+                        "FileOffset": file_offsets[0],  # Start from the first replacement
+                        "ReplacementText": "".join(replacement_texts),  # Concatenate all replacement texts
+                        "ReplacementLength": sum(replacement_lengths),  # Sum all replacement lengths
+                    }
+                )
+            else:
+                for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
+                    clang_tidy_diagnostics.append(
+                        {
+                            "DiagnosticName": diagnostic["DiagnosticName"],
+                            "Message": diagnostic["DiagnosticMessage"]["Message"],
+                            "FilePath": replacement["FilePath"],
+                            "FileOffset": replacement["Offset"],
+                            "ReplacementLength": replacement["Length"],
+                            "ReplacementText": replacement["ReplacementText"],
+                        }
+                    )
     # Mark duplicates
     unique_diagnostics = set()
     for diagnostic in clang_tidy_diagnostics:
