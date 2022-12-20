@@ -12,14 +12,13 @@ A GitHub Action to post `clang-tidy` warnings and suggestions as review comments
 
 ![action preview](https://i.imgur.com/lQiFdT9.png)
 
-## Table of contents
-
 * [What](#what)
   * [Supported clang-tidy versions](#supported-clang-tidy-versions)
 * [How](#how)
   * [Basic configuration example](#basic-configuration-example)
   * [Triggering this Action manually](#triggering-this-action-manually)
   * [Using this Action to safely perform analysis of pull requests from forks](#using-this-action-to-safely-perform-analysis-of-pull-requests-from-forks)
+* [Who's using this action?](#whos-using-this-action)
 
 ## What
 
@@ -290,6 +289,18 @@ jobs:
         clang_tidy_fixes: clang-tidy-result/fixes.yml
         pull_request_id: ${{ env.pr_id }}
 ```
+
+## Who's using this action?
+
+Are you using this action in your project? Got some interesting use case?<br>
+Add your project to the list below by opening a pull request or asking for it on an issue.
+
+| Project                                                                                                        | Workflow       |
+|----------------------------------------------------------------------------------------------------------------|----------------|
+| [Cura](https://github.com/Ultimaker/Cura/blob/main/.github/workflows/printer-linter-pr-post.yml)               | printer-linter |
+| [Orbit](https://github.com/google/orbit/blob/main/.github/workflows/report-build-and-test.yml)                 | CMake + Qt     |
+| [Smartcar shield](https://github.com/platisd/smartcar_shield/blob/master/.github/workflows/tests.yml)          | CMake          |
+| [cpp-command-parser](https://github.com/platisd/cpp-command-parser/blob/main/.github/workflows/clang-tidy.yml) | CMake          |
 
 [clang-tidy-8 support]: https://img.shields.io/badge/clang--tidy-8-green
 [clang-tidy-9 support]: https://img.shields.io/badge/clang--tidy-9-green
