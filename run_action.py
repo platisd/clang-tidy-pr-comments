@@ -149,12 +149,23 @@ def main():
     with open(args.clang_tidy_fixes, encoding="utf_8") as file:
         clang_tidy_fixes = yaml.safe_load(file)
 
+    pull_request_reviews_url = "%s/repos/%s/pulls/%d/reviews" % (
+        github_api_url,
+        repo,
+        args.pull_request_id,
+    )
+    warning_comment_prefix = (
+        ":warning: `clang-tidy` found issue(s) with the introduced code"
+    )
     if (
         clang_tidy_fixes is None
         or "Diagnostics" not in clang_tidy_fixes.keys()
         or len(clang_tidy_fixes["Diagnostics"]) == 0
     ):
         print("No warnings found by clang-tidy")
+        dismiss_change_requests(
+            pull_request_reviews_url, github_token, warning_comment_prefix
+        )
         return 0
 
     # If we have a clang-tidy-8 format, then upconvert it to the clang-tidy-9 one
@@ -406,18 +417,12 @@ def main():
     total_reviews = len(review_comments)
     current_review = 1
     for comments_chunk in review_comments:
-        warning_comment = (
-            ":warning: "
-            "`clang-tidy` found issue(s) with the introduced code (%i/%i)"
-            % (current_review, total_reviews)
+        warning_comment = warning_comment_prefix + " (%i/%i)" % (
+            current_review,
+            total_reviews,
         )
         current_review += 1
 
-        pull_request_reviews_url = "%s/repos/%s/pulls/%d/reviews" % (
-            github_api_url,
-            repo,
-            args.pull_request_id,
-        )
         post_review_result = requests.post(
             pull_request_reviews_url,
             json={
@@ -445,6 +450,55 @@ def main():
         time.sleep(10)
 
     return 0
+
+
+def dismiss_change_requests(
+    pull_request_reviews_url, github_token, warning_comment_prefix
+):
+    print("Checking if there are any previous requests for changes to dismiss")
+    pull_request_reviews_result = requests.get(
+        pull_request_reviews_url,
+        headers={
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": "token %s" % github_token,
+        },
+    )
+    if pull_request_reviews_result.status_code != requests.codes.ok:
+        print(
+            "Request to get pull request reviews failed with error code: "
+            + str(pull_request_reviews_result.status_code)
+        )
+        return
+
+    pull_request_reviews_list = json.loads(pull_request_reviews_result.text)
+    # Dismiss only our own reviews
+    reviews_to_dismiss = [
+        review["id"]
+        for review in pull_request_reviews_list
+        if review["state"] == "CHANGES_REQUESTED"
+        and warning_comment_prefix in review["body"]
+        and review["user"]["login"] == "github-actions[bot]"
+    ]
+    pull_request_dismiss_url = pull_request_reviews_url + "/%d/dismissals"
+    for review_id in reviews_to_dismiss:
+        print("Dismissing review %d" % review_id)
+        dismiss_result = requests.put(
+            pull_request_dismiss_url % review_id,
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": "token %s" % github_token,
+            },
+            json={
+                "message": "No clang-tidy warnings found so I assume my comments were addressed",
+                "event": "DISMISS",
+            },
+        )
+        if dismiss_result.status_code != requests.codes.ok:
+            print(
+                "Request to dismiss review failed with error code: "
+                + str(dismiss_result.status_code)
+            )
+        time.sleep(1)  # Avoid triggering abuse detection
 
 
 if __name__ == "__main__":
