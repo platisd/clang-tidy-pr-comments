@@ -23,13 +23,11 @@ def chunks(lst, n):
 def markdown(s):
     md_chars = "\\`*_{}[]<>()#+-.!|"
 
-
     def escape_chars(s):
         for ch in md_chars:
             s = s.replace(ch, "\\" + ch)
 
         return s
-
 
     def unescape_chars(s):
         for ch in md_chars:
@@ -37,15 +35,11 @@ def markdown(s):
 
         return s
 
-
     # Escape markdown characters
     s = escape_chars(s)
     # Decorate quoted symbols as code
     s = re.sub(
-        "'([^']*)'",
-        lambda match:
-            "`` " + unescape_chars(match.group(1)) + " ``",
-        s
+        "'([^']*)'", lambda match: "`` " + unescape_chars(match.group(1)) + " ``", s
     )
 
     return s
@@ -132,7 +126,9 @@ def main():
         if "patch" not in pull_request_file:
             continue
 
-        git_line_tags = re.findall(r"^@@ -.*? +.*? @@", pull_request_file["patch"], re.MULTILINE)
+        git_line_tags = re.findall(
+            r"^@@ -.*? +.*? @@", pull_request_file["patch"], re.MULTILINE
+        )
         # The result is something like ['@@ -101,8 +102,11 @@', '@@ -123,9 +127,7 @@']
         # We need to get it to a state like this: ['102,11', '127,7']
         lines_and_changes = [
@@ -140,8 +136,7 @@ def main():
             for line_tag in git_line_tags
         ]
         lines_available_for_comments = [
-            get_lines(change)
-            for change in lines_and_changes
+            get_lines(change) for change in lines_and_changes
         ]
         lines_available_for_comments = list(
             itertools.chain.from_iterable(lines_available_for_comments)
@@ -211,10 +206,16 @@ def main():
             # Check if the replacements are consecutive
             replacements_are_consecutive = True
             for i in range(len(diagnostic["DiagnosticMessage"]["Replacements"]) - 1):
-                current_offset = diagnostic["DiagnosticMessage"]["Replacements"][i]["Offset"]
-                current_length = diagnostic["DiagnosticMessage"]["Replacements"][i]["Length"]
-                next_offset = diagnostic["DiagnosticMessage"]["Replacements"][i + 1]["Offset"]
-                if (current_offset + current_length < next_offset - 1):
+                current_offset = diagnostic["DiagnosticMessage"]["Replacements"][i][
+                    "Offset"
+                ]
+                current_length = diagnostic["DiagnosticMessage"]["Replacements"][i][
+                    "Length"
+                ]
+                next_offset = diagnostic["DiagnosticMessage"]["Replacements"][i + 1][
+                    "Offset"
+                ]
+                if current_offset + current_length < next_offset - 1:
                     replacements_are_consecutive = False
                     break
 
@@ -235,9 +236,15 @@ def main():
                         "DiagnosticName": diagnostic["DiagnosticName"],
                         "Message": diagnostic["DiagnosticMessage"]["Message"],
                         "FilePath": file_paths[0],
-                        "FileOffset": file_offsets[0],  # Start from the first replacement
-                        "ReplacementText": "".join(replacement_texts),  # Concatenate all replacement texts
-                        "ReplacementLength": sum(replacement_lengths),  # Sum all replacement lengths
+                        "FileOffset": file_offsets[
+                            0
+                        ],  # Start from the first replacement
+                        "ReplacementText": "".join(
+                            replacement_texts
+                        ),  # Concatenate all replacement texts
+                        "ReplacementLength": sum(
+                            replacement_lengths
+                        ),  # Sum all replacement lengths
                     }
                 )
             else:
@@ -273,8 +280,7 @@ def main():
     clang_tidy_diagnostics[:] = [
         diagnostic
         for diagnostic in clang_tidy_diagnostics
-        if diagnostic["FilePath"]
-        in files_and_lines_available_for_comments.keys()
+        if diagnostic["FilePath"] in files_and_lines_available_for_comments.keys()
     ]
 
     if len(clang_tidy_diagnostics) == 0:
@@ -290,22 +296,24 @@ def main():
         with open(repository_root + file_path, encoding="latin_1") as f:
             source_file = f.read()
         suggestion_begin = diagnostic["FileOffset"]
-        start_line_number = source_file[: suggestion_begin].count("\n") + 1
+        start_line_number = source_file[:suggestion_begin].count("\n") + 1
         # Compose code suggestion/replacement (if available)
         if "ReplacementText" not in diagnostic.keys():
             suggestion = ""
             finish_line_number = start_line_number
         else:
             suggestion_end = suggestion_begin + diagnostic["ReplacementLength"]
-            finish_line_number = source_file[: suggestion_end].count("\n") + 1
+            finish_line_number = source_file[:suggestion_end].count("\n") + 1
 
             # We know exactly what we want to replace, however our GitHub suggestion needs to
             # replace the entire lines, from the first to the last
             lines_to_replace_begin = source_file.rfind("\n", 0, suggestion_begin) + 1
             lines_to_replace_end = source_file.find("\n", suggestion_end)
-            source_file_line = source_file[lines_to_replace_begin:suggestion_begin] \
-                + diagnostic["ReplacementText"] \
+            source_file_line = (
+                source_file[lines_to_replace_begin:suggestion_begin]
+                + diagnostic["ReplacementText"]
                 + source_file[suggestion_end:lines_to_replace_end]
+            )
 
             # Make sure the code suggestion ends with a newline character
             if not source_file_line or source_file_line[-1] != "\n":
@@ -314,7 +322,9 @@ def main():
 
         # Ignore comments on lines that were not changed in the pull request
         changed_lines = files_and_lines_available_for_comments[file_path]
-        if start_line_number in changed_lines:  # The finish line may be outside the changed lines
+        if (
+            start_line_number in changed_lines
+        ):  # The finish line may be outside the changed lines
             review_comment_body = (
                 ":warning: **"
                 + markdown(diagnostic["DiagnosticName"])
@@ -334,7 +344,6 @@ def main():
             if start_line_number < finish_line_number:
                 review_comments[-1]["start_line"] = start_line_number
                 review_comments[-1]["start_side"] = "RIGHT"
-
 
     if len(review_comments) == 0:
         print("Warnings found but none in lines changed by this pull request.")
@@ -377,10 +386,10 @@ def main():
         review_comments = list(
             filter(
                 lambda review_comment: not (
-                    review_comment["path"] == comment["path"] and
-                    review_comment["line"] == comment["line"] and
-                    review_comment["side"] == comment["side"] and
-                    review_comment["body"] == comment["body"]
+                    review_comment["path"] == comment["path"]
+                    and review_comment["line"] == comment["line"]
+                    and review_comment["side"] == comment["side"]
+                    and review_comment["body"] == comment["body"]
                 ),
                 review_comments,
             )
