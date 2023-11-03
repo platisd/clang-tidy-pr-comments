@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+"""Runner of the 'pull request comments from Clang-Tidy reports' action"""
+
 import argparse
-import itertools
+import copy
+import difflib
 import json
 import os
 import posixpath
@@ -13,57 +16,466 @@ import requests
 import yaml
 
 
-def chunks(lst, n):
-    # Copied from: https://stackoverflow.com/a/312464
-    """Yield successive n-sized chunks from lst."""
-    for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+def get_diff_lines_per_file(pr_files):
+    """Generates and returns a set of affected line numbers for each file that has been modified
+    by the processed PR"""
+
+    def change_to_line_range(change):
+        split_change = change.split(",")
+        start = int(split_change[0])
+
+        if len(split_change) > 1:
+            size = int(split_change[1])
+        else:
+            size = 1
+
+        return range(start, start + size)
+
+    result = {}
+
+    for pr_file in pr_files:
+        # Not all PR file metadata entries may contain a patch section
+        # For example, entries related to removed binary files may not contain it
+        if "patch" not in pr_file:
+            continue
+
+        file_name = pr_file["filename"]
+
+        # The result is something like ['@@ -101,8 +102,11 @@', '@@ -123,9 +127,7 @@']
+        git_line_tags = re.findall(r"^@@ -.*? +.*? @@", pr_file["patch"], re.MULTILINE)
+
+        # We need to get it to a state like this: ['102,11', '127,7']
+        changes = [
+            tag.replace("@@", "").strip().split()[1].replace("+", "")
+            for tag in git_line_tags
+        ]
+
+        result[file_name] = set()
+        for lines in [change_to_line_range(change) for change in changes]:
+            for line in lines:
+                result[file_name].add(line)
+
+    return result
 
 
-def markdown(s):
-    md_chars = "\\`*_{}[]<>()#+-.!|"
+def get_pull_request_files(
+    github_api_url, github_token, github_api_timeout, repo, pull_request_id
+):
+    """Generator of GitHub metadata about files modified by the processed PR"""
 
-    def escape_chars(s):
-        for ch in md_chars:
-            s = s.replace(ch, "\\" + ch)
+    # Request a maximum of 100 pages (3000 files)
+    for page in range(1, 101):
+        result = requests.get(
+            f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/files?page={page:d}",
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"token {github_token}",
+            },
+            timeout=github_api_timeout,
+        )
+
+        assert result.status_code == requests.codes.ok  # pylint: disable=no-member
+
+        chunk = json.loads(result.text)
+
+        if len(chunk) == 0:
+            break
+
+        for item in chunk:
+            yield item
+
+
+def get_pull_request_comments(
+    github_api_url, github_token, github_api_timeout, repo, pull_request_id
+):
+    """GitHub metadata generator about comments to the processed PR"""
+
+    # Request a maximum of 100 pages (3000 files)
+    for page in range(1, 101):
+        result = requests.get(
+            f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/comments?page={page:d}",
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"token {github_token}",
+            },
+            timeout=github_api_timeout,
+        )
+
+        assert result.status_code == requests.codes.ok  # pylint: disable=no-member
+
+        chunk = json.loads(result.text)
+
+        if len(chunk) == 0:
+            break
+
+        for item in chunk:
+            yield item
+
+
+def generate_review_comments(
+    clang_tidy_fixes, repository_root, diff_lines_per_file
+):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    """Generator of the Clang-Tidy review comments"""
+
+    def get_line_by_offset(repository_root, file_path, offset):
+        # Clang-Tidy doesn't support multibyte encodings and measures offsets in bytes
+        with open(repository_root + file_path, encoding="latin_1") as file:
+            source_file = file.read()
+
+        return source_file[:offset].count("\n") + 1
+
+    def calculate_replacements_diff(repository_root, file_path, replacements):
+        # Apply the replacements in reverse order so that subsequent offsets are not shifted
+        replacements.sort(key=lambda item: (-item["Offset"]))
+
+        # Clang-Tidy doesn't support multibyte encodings and measures offsets in bytes
+        with open(repository_root + file_path, encoding="latin_1") as file:
+            source_file = file.read()
+
+        changed_file = copy.deepcopy(source_file)
+
+        for replacement in replacements:
+            changed_file = (
+                changed_file[: replacement["Offset"]]
+                + replacement["ReplacementText"]
+                + changed_file[replacement["Offset"] + replacement["Length"] :]
+            )
+
+        # Create and return the diff between the original version of the file and the version
+        # with the applied replacements
+        return difflib.Differ().compare(
+            source_file.splitlines(keepends=True),
+            changed_file.splitlines(keepends=True),
+        )
+
+    def markdown(s):
+        md_chars = "\\`*_{}[]<>()#+-.!|"
+
+        def escape_chars(s):
+            for ch in md_chars:
+                s = s.replace(ch, "\\" + ch)
+
+            return s
+
+        def unescape_chars(s):
+            for ch in md_chars:
+                s = s.replace("\\" + ch, ch)
+
+            return s
+
+        # Escape markdown characters
+        s = escape_chars(s)
+        # Decorate quoted symbols as code
+        s = re.sub(
+            "'([^']*)'", lambda match: "`` " + unescape_chars(match.group(1)) + " ``", s
+        )
 
         return s
 
-    def unescape_chars(s):
-        for ch in md_chars:
-            s = s.replace("\\" + ch, ch)
+    def generate_single_comment(
+        file_path, start_line_num, end_line_num, name, message, replacement_text=None
+    ):  # pylint: disable=too-many-arguments
+        result = {
+            "path": file_path,
+            "line": end_line_num,
+            "side": "RIGHT",
+            "body": ":warning: **"
+            + markdown(name)
+            + "** :warning:\n"
+            + markdown(message),
+        }
 
-        return s
+        if start_line_num != end_line_num:
+            result["start_line"] = start_line_num
+            result["start_side"] = "RIGHT"
 
-    # Escape markdown characters
-    s = escape_chars(s)
-    # Decorate quoted symbols as code
-    s = re.sub(
-        "'([^']*)'", lambda match: "`` " + unescape_chars(match.group(1)) + " ``", s
+        if replacement_text is not None:
+            # Make sure the code suggestion ends with a newline character
+            if not replacement_text or replacement_text[-1] != "\n":
+                replacement_text += "\n"
+
+            result["body"] += f"\n```suggestion\n{replacement_text}```"
+
+        return result
+
+    for diag in clang_tidy_fixes[  # pylint: disable=too-many-nested-blocks
+        "Diagnostics"
+    ]:
+        # If we have a Clang-Tidy 8 format, then upconvert it to the Clang-Tidy 9+
+        if "DiagnosticMessage" not in diag:
+            diag["DiagnosticMessage"] = {
+                "FileOffset": diag["FileOffset"],
+                "FilePath": diag["FilePath"],
+                "Message": diag["Message"],
+                "Replacements": diag["Replacements"],
+            }
+
+        diag_message = diag["DiagnosticMessage"]
+
+        # Normalize paths
+        diag_message["FilePath"] = posixpath.normpath(
+            diag_message["FilePath"].replace(repository_root, "")
+        )
+        for replacement in diag_message["Replacements"]:
+            replacement["FilePath"] = posixpath.normpath(
+                replacement["FilePath"].replace(repository_root, "")
+            )
+
+        diag_name = diag["DiagnosticName"]
+        diag_message_msg = diag_message["Message"]
+
+        if not diag_message["Replacements"]:
+            file_path = diag_message["FilePath"]
+            offset = diag_message["FileOffset"]
+            line_num = get_line_by_offset(repository_root, file_path, offset)
+
+            print(f"Processing '{diag_name}' at line {line_num:d} of {file_path}...")
+
+            if (
+                file_path in diff_lines_per_file
+                and line_num in diff_lines_per_file[file_path]
+            ):
+                yield generate_single_comment(
+                    file_path, line_num, line_num, diag_name, diag_message_msg
+                )
+            else:
+                print("This warning does not apply to the lines changed in this PR")
+        else:
+            diag_message_replacements = diag_message["Replacements"]
+
+            for file_path in {item["FilePath"] for item in diag_message_replacements}:
+                line_num = 1
+                start_line_num = None
+                end_line_num = None
+                replacement_text = None
+
+                for line in calculate_replacements_diff(
+                    repository_root,
+                    file_path,
+                    [
+                        item
+                        for item in diag_message_replacements
+                        if item["FilePath"] == file_path
+                    ],
+                ):
+                    # The comment line in the diff, ignore it
+                    if line.startswith("? "):
+                        continue
+
+                    # A string belonging only to the original version is the beginning or
+                    # continuation of the section of the file that should be replaced
+                    if line.startswith("- "):
+                        if start_line_num is None:
+                            assert end_line_num is None
+
+                            start_line_num = line_num
+                            end_line_num = line_num
+                        else:
+                            assert end_line_num is not None
+
+                            end_line_num = line_num
+
+                        if replacement_text is None:
+                            replacement_text = ""
+
+                        line_num += 1
+                    # A string belonging only to the modified version is part of the
+                    # replacement text
+                    elif line.startswith("+ "):
+                        if replacement_text is None:
+                            replacement_text = line[2:]
+                        else:
+                            replacement_text += line[2:]
+                    # A string belonging to both original and modified versions is the
+                    # end of the section to replace
+                    elif line.startswith("  "):
+                        if replacement_text is not None:
+                            assert (
+                                start_line_num is not None and end_line_num is not None
+                            )
+
+                            print(
+                                # pylint: disable=line-too-long
+                                f"Processing '{diag_name}' at lines {start_line_num:d}-{end_line_num:d} of {file_path}..."
+                            )
+
+                            if (
+                                file_path in diff_lines_per_file
+                                and start_line_num in diff_lines_per_file[file_path]
+                            ):
+                                yield generate_single_comment(
+                                    file_path,
+                                    start_line_num,
+                                    end_line_num,
+                                    diag_name,
+                                    diag_message_msg,
+                                    replacement_text,
+                                )
+                            else:
+                                print(
+                                    "This warning does not apply to the lines changed in this PR"
+                                )
+
+                            start_line_num = None
+                            end_line_num = None
+                            replacement_text = None
+
+                        line_num += 1
+                    # Unknown prefix, this should not happen
+                    else:
+                        assert False
+
+                # The end of the file is reached, but there is a section to replace
+                if replacement_text is not None:
+                    assert start_line_num is not None and end_line_num is not None
+
+                    print(
+                        # pylint: disable=line-too-long
+                        f"Processing '{diag_name}' at lines {start_line_num:d}-{end_line_num:d} of {file_path}..."
+                    )
+
+                    if (
+                        file_path in diff_lines_per_file
+                        and start_line_num in diff_lines_per_file[file_path]
+                    ):
+                        yield generate_single_comment(
+                            file_path,
+                            start_line_num,
+                            end_line_num,
+                            diag_name,
+                            diag_message_msg,
+                            replacement_text,
+                        )
+                    else:
+                        print(
+                            "This warning does not apply to the lines changed in this PR"
+                        )
+
+
+def post_review_comments(
+    github_api_url,
+    github_token,
+    github_api_timeout,
+    repo,
+    pull_request_id,
+    warning_comment_prefix,
+    review_event,
+    review_comments,
+    suggestions_per_comment,
+):  # pylint: disable=too-many-arguments
+    """Sending the Clang-Tidy review comments to GitHub"""
+
+    def split_into_chunks(lst, n):
+        # Copied from: https://stackoverflow.com/a/312464
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i : i + n]
+
+    # Split the comments in chunks to avoid overloading the server
+    # and getting 502 server errors as a response for large reviews
+    review_comments = list(split_into_chunks(review_comments, suggestions_per_comment))
+
+    total_reviews = len(review_comments)
+    current_review = 1
+
+    for comments_chunk in review_comments:
+        warning_comment = (
+            warning_comment_prefix + f" ({current_review:d}/{total_reviews:d})"
+        )
+        current_review += 1
+
+        result = requests.post(
+            f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/reviews",
+            json={
+                "body": warning_comment,
+                "event": review_event,
+                "comments": comments_chunk,
+            },
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"token {github_token}",
+            },
+            timeout=github_api_timeout,
+        )
+
+        # Ignore bad gateway errors (false negatives?)
+        assert result.status_code in (
+            requests.codes.ok,  # pylint: disable=no-member
+            requests.codes.bad_gateway,  # pylint: disable=no-member
+        )
+
+        # Avoid triggering abuse detection
+        time.sleep(10)
+
+
+def dismiss_change_requests(
+    github_api_url,
+    github_token,
+    github_api_timeout,
+    repo,
+    pull_request_id,
+    warning_comment_prefix,
+):  # pylint: disable=too-many-arguments
+    """Dismissing stale Clang-Tidy requests for changes"""
+
+    print("Checking if there are any stale requests for changes to dismiss...")
+
+    result = requests.get(
+        f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/reviews",
+        headers={
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"token {github_token}",
+        },
+        timeout=github_api_timeout,
     )
 
-    return s
+    assert result.status_code == requests.codes.ok  # pylint: disable=no-member
 
+    reviews = json.loads(result.text)
 
-def get_lines(change):
-    split_change = change.split(",")
-    start = int(split_change[0])
-    if len(split_change) > 1:
-        size = int(split_change[1])
-    else:
-        size = 1
-    return list(range(start, start + size))
+    # Dismiss only our own reviews
+    reviews_to_dismiss = [
+        review["id"]
+        for review in reviews
+        if review["state"] == "CHANGES_REQUESTED"
+        and warning_comment_prefix in review["body"]
+        and review["user"]["login"] == "github-actions[bot]"
+    ]
+
+    for review_id in reviews_to_dismiss:
+        print(f"Dismissing review {review_id:d}")
+
+        result = requests.put(
+            # pylint: disable=line-too-long
+            f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/reviews/{review_id:d}/dismissals",
+            headers={
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": f"token {github_token}",
+            },
+            json={
+                "message": "No Clang-Tidy warnings found so I assume my comments were addressed",
+                "event": "DISMISS",
+            },
+            timeout=github_api_timeout,
+        )
+
+        assert result.status_code == requests.codes.ok  # pylint: disable=no-member
+
+        # Avoid triggering abuse detection
+        time.sleep(10)
 
 
 def main():
+    """Entry point"""
+
     parser = argparse.ArgumentParser(
-        description="Pull request comments from clang-tidy reports action runner"
+        description="Runner of the 'pull request comments from Clang-Tidy reports' action"
     )
     parser.add_argument(
         "--clang-tidy-fixes",
         type=str,
         required=True,
-        help="The path to the clang-tidy fixes YAML",
+        help="The path to the Clang-Tidy fixes YAML",
     )
     parser.add_argument(
         "--pull-request-id",
@@ -77,6 +489,7 @@ def main():
         required=True,
         help="The path to the root of the repository containing the code",
     )
+
     args = parser.parse_args()
 
     repo = os.environ.get("GITHUB_REPOSITORY")
@@ -87,418 +500,87 @@ def main():
         else "COMMENT"
     )
     github_api_url = os.environ.get("GITHUB_API_URL")
+    suggestions_per_comment = int(os.environ.get("INPUT_SUGGESTIONS_PER_COMMENT"))
 
-    pull_request_files = []
-    # Request a maximum of 100 pages (3000 files)
-    for page_num in range(1, 101):
-        pull_files_url = "%s/repos/%s/pulls/%d/files?page=%d" % (
-            github_api_url,
-            repo,
-            args.pull_request_id,
-            page_num,
+    github_api_timeout = 10
+    warning_comment_prefix = (
+        ":warning: `Clang-Tidy` found issue(s) with the introduced code"
+    )
+
+    diff_lines_per_file = get_diff_lines_per_file(
+        get_pull_request_files(
+            github_api_url, github_token, github_api_timeout, repo, args.pull_request_id
         )
-        pull_files_result = requests.get(
-            pull_files_url,
-            headers={
-                "Accept": "application/vnd.github.v3+json",
-                "Authorization": "token %s" % github_token,
-            },
-        )
+    )
 
-        if pull_files_result.status_code != requests.codes.ok:
-            print(
-                "Request to get list of files failed with error code: "
-                + str(pull_files_result.status_code)
-            )
-            return 1
-
-        pull_files_chunk = json.loads(pull_files_result.text)
-
-        if len(pull_files_chunk) == 0:
-            break
-
-        pull_request_files.extend(pull_files_chunk)
-
-    files_and_lines_available_for_comments = {}
-    for pull_request_file in pull_request_files:
-        # Not all PR file metadata entries may contain a patch section
-        # For example, entries related to removed binary files may not contain it
-        if "patch" not in pull_request_file:
-            continue
-
-        git_line_tags = re.findall(
-            r"^@@ -.*? +.*? @@", pull_request_file["patch"], re.MULTILINE
-        )
-        # The result is something like ['@@ -101,8 +102,11 @@', '@@ -123,9 +127,7 @@']
-        # We need to get it to a state like this: ['102,11', '127,7']
-        lines_and_changes = [
-            line_tag.replace("@@", "").strip().split()[1].replace("+", "")
-            for line_tag in git_line_tags
-        ]
-        lines_available_for_comments = [
-            get_lines(change) for change in lines_and_changes
-        ]
-        lines_available_for_comments = list(
-            itertools.chain.from_iterable(lines_available_for_comments)
-        )
-        files_and_lines_available_for_comments[
-            pull_request_file["filename"]
-        ] = lines_available_for_comments
-
-    clang_tidy_fixes = {}
     with open(args.clang_tidy_fixes, encoding="utf_8") as file:
         clang_tidy_fixes = yaml.safe_load(file)
 
-    pull_request_reviews_url = "%s/repos/%s/pulls/%d/reviews" % (
-        github_api_url,
-        repo,
-        args.pull_request_id,
-    )
-    warning_comment_prefix = (
-        ":warning: `clang-tidy` found issue(s) with the introduced code"
-    )
     if (
         clang_tidy_fixes is None
         or "Diagnostics" not in clang_tidy_fixes.keys()
         or len(clang_tidy_fixes["Diagnostics"]) == 0
     ):
-        print("No warnings found by clang-tidy")
+        print("No warnings found by Clang-Tidy")
         dismiss_change_requests(
-            pull_request_reviews_url, github_token, warning_comment_prefix
-        )
-        return 0
-
-    # If we have a clang-tidy-8 format, then upconvert it to the clang-tidy-9 one
-    if "DiagnosticMessage" not in clang_tidy_fixes["Diagnostics"][0].keys():
-        clang_tidy_fixes["Diagnostics"][:] = [
-            {
-                "DiagnosticName": d["DiagnosticName"],
-                "DiagnosticMessage": {
-                    "FileOffset": d["FileOffset"],
-                    "FilePath": d["FilePath"],
-                    "Message": d["Message"],
-                    "Replacements": d["Replacements"],
-                },
-            }
-            for d in clang_tidy_fixes["Diagnostics"]
-        ]
-
-    repository_root = args.repository_root + "/"
-    # Normalize paths
-    for diagnostic in clang_tidy_fixes["Diagnostics"]:
-        diagnostic["DiagnosticMessage"]["FilePath"] = diagnostic["DiagnosticMessage"][
-            "FilePath"
-        ].replace(repository_root, "")
-        diagnostic["DiagnosticMessage"]["FilePath"] = posixpath.normpath(
-            diagnostic["DiagnosticMessage"]["FilePath"]
-        )
-        for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
-            replacement["FilePath"] = replacement["FilePath"].replace(
-                repository_root, ""
-            )
-            replacement["FilePath"] = posixpath.normpath(replacement["FilePath"])
-    # Create a separate diagnostic entry for each replacement entry, if any
-    clang_tidy_diagnostics = []
-    for diagnostic in clang_tidy_fixes["Diagnostics"]:
-        if not diagnostic["DiagnosticMessage"]["Replacements"]:
-            clang_tidy_diagnostics.append(
-                {
-                    "DiagnosticName": diagnostic["DiagnosticName"],
-                    "Message": diagnostic["DiagnosticMessage"]["Message"],
-                    "FilePath": diagnostic["DiagnosticMessage"]["FilePath"],
-                    "FileOffset": diagnostic["DiagnosticMessage"]["FileOffset"],
-                }
-            )
-        else:
-            # If there are multiple replacements we need to determine whether they are consecutive.
-            # If they are, then they need to be applied all at once, therefore we need to merge
-            # them all into a single suggestion
-            # If not, then we need to create a separate suggestion for each replacement
-            # Check if the replacements are consecutive
-            replacements_are_consecutive = True
-            for i in range(len(diagnostic["DiagnosticMessage"]["Replacements"]) - 1):
-                current_offset = diagnostic["DiagnosticMessage"]["Replacements"][i][
-                    "Offset"
-                ]
-                current_length = diagnostic["DiagnosticMessage"]["Replacements"][i][
-                    "Length"
-                ]
-                next_offset = diagnostic["DiagnosticMessage"]["Replacements"][i + 1][
-                    "Offset"
-                ]
-                if current_offset + current_length < next_offset - 1:
-                    replacements_are_consecutive = False
-                    break
-
-            if replacements_are_consecutive:
-                file_paths = []
-                file_offsets = []
-                replacement_lengths = []
-                replacement_texts = []
-                for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
-                    file_paths.append(replacement["FilePath"])
-                    file_offsets.append(replacement["Offset"])
-                    replacement_lengths.append(replacement["Length"])
-                    replacement_texts.append(replacement["ReplacementText"])
-
-                assert all(path == file_paths[0] for path in file_paths)
-                clang_tidy_diagnostics.append(
-                    {
-                        "DiagnosticName": diagnostic["DiagnosticName"],
-                        "Message": diagnostic["DiagnosticMessage"]["Message"],
-                        "FilePath": file_paths[0],
-                        "FileOffset": file_offsets[
-                            0
-                        ],  # Start from the first replacement
-                        "ReplacementText": "".join(
-                            replacement_texts
-                        ),  # Concatenate all replacement texts
-                        "ReplacementLength": sum(
-                            replacement_lengths
-                        ),  # Sum all replacement lengths
-                    }
-                )
-            else:
-                for replacement in diagnostic["DiagnosticMessage"]["Replacements"]:
-                    clang_tidy_diagnostics.append(
-                        {
-                            "DiagnosticName": diagnostic["DiagnosticName"],
-                            "Message": diagnostic["DiagnosticMessage"]["Message"],
-                            "FilePath": replacement["FilePath"],
-                            "FileOffset": replacement["Offset"],
-                            "ReplacementLength": replacement["Length"],
-                            "ReplacementText": replacement["ReplacementText"],
-                        }
-                    )
-    # Mark duplicates
-    unique_diagnostics = set()
-    for diagnostic in clang_tidy_diagnostics:
-        unique_combo = (
-            diagnostic["DiagnosticName"],
-            diagnostic["FilePath"],
-            diagnostic["FileOffset"],
-        )
-        diagnostic["Duplicate"] = unique_combo in unique_diagnostics
-        unique_diagnostics.add(unique_combo)
-    # Remove the duplicates
-    clang_tidy_diagnostics[:] = [
-        diagnostic
-        for diagnostic in clang_tidy_diagnostics
-        if not diagnostic["Duplicate"]
-    ]
-
-    # Remove entries we cannot comment on as the files weren't changed in this pull request
-    clang_tidy_diagnostics[:] = [
-        diagnostic
-        for diagnostic in clang_tidy_diagnostics
-        if diagnostic["FilePath"] in files_and_lines_available_for_comments.keys()
-    ]
-
-    if len(clang_tidy_diagnostics) == 0:
-        print("No warnings found in files changed in this pull request")
-        return 0
-
-    # Create the review comments
-    review_comments = []
-    for diagnostic in clang_tidy_diagnostics:
-        file_path = diagnostic["FilePath"]
-
-        # Apparently Clang-Tidy doesn't support multibyte encodings and measures offsets in bytes
-        with open(repository_root + file_path, encoding="latin_1") as f:
-            source_file = f.read()
-        suggestion_begin = diagnostic["FileOffset"]
-        start_line_number = source_file[:suggestion_begin].count("\n") + 1
-        # Compose code suggestion/replacement (if available)
-        if "ReplacementText" not in diagnostic.keys():
-            suggestion = ""
-            finish_line_number = start_line_number
-        else:
-            suggestion_end = suggestion_begin + diagnostic["ReplacementLength"]
-            finish_line_number = source_file[:suggestion_end].count("\n") + 1
-
-            # We know exactly what we want to replace, however our GitHub suggestion needs to
-            # replace the entire lines, from the first to the last
-            lines_to_replace_begin = source_file.rfind("\n", 0, suggestion_begin) + 1
-            lines_to_replace_end = source_file.find("\n", suggestion_end)
-            source_file_line = (
-                source_file[lines_to_replace_begin:suggestion_begin]
-                + diagnostic["ReplacementText"]
-                + source_file[suggestion_end:lines_to_replace_end]
-            )
-
-            # Make sure the code suggestion ends with a newline character
-            if not source_file_line or source_file_line[-1] != "\n":
-                source_file_line += "\n"
-            suggestion = "\n```suggestion\n" + source_file_line + "```"
-
-        # Ignore comments on lines that were not changed in the pull request
-        changed_lines = files_and_lines_available_for_comments[file_path]
-        if (
-            start_line_number in changed_lines
-        ):  # The finish line may be outside the changed lines
-            review_comment_body = (
-                ":warning: **"
-                + markdown(diagnostic["DiagnosticName"])
-                + "** :warning:\n"
-                + markdown(diagnostic["Message"])
-                + suggestion
-            )
-            review_comments.append(
-                {
-                    "path": file_path,
-                    "line": finish_line_number,
-                    "side": "RIGHT",
-                    "body": review_comment_body,
-                }
-            )
-            # The start line number should be added only when needed or GitHub complains
-            if start_line_number < finish_line_number:
-                review_comments[-1]["start_line"] = start_line_number
-                review_comments[-1]["start_side"] = "RIGHT"
-
-    if len(review_comments) == 0:
-        print("Warnings found but none in lines changed by this pull request.")
-        return 0
-
-    # Load the existing review comments
-    existing_pull_request_comments = []
-    # Request a maximum of 100 pages (3000 comments)
-    for page_num in range(1, 101):
-        pull_comments_url = "%s/repos/%s/pulls/%d/comments?page=%d" % (
             github_api_url,
+            github_token,
+            github_api_timeout,
             repo,
             args.pull_request_id,
-            page_num,
+            warning_comment_prefix,
         )
-        pull_comments_result = requests.get(
-            pull_comments_url,
-            headers={
-                "Accept": "application/vnd.github.v3+json",
-                "Authorization": "token %s" % github_token,
-            },
+        return 0
+
+    review_comments = list(
+        generate_review_comments(
+            clang_tidy_fixes, args.repository_root + "/", diff_lines_per_file
         )
+    )
 
-        if pull_comments_result.status_code != requests.codes.ok:
-            print(
-                "Request to get pull request comments failed with error code: "
-                + str(pull_comments_result.status_code)
-            )
-            return 1
-
-        pull_comments_chunk = json.loads(pull_comments_result.text)
-
-        if len(pull_comments_chunk) == 0:
-            break
-
-        existing_pull_request_comments.extend(pull_comments_chunk)
+    existing_pull_request_comments = list(
+        get_pull_request_comments(
+            github_api_url, github_token, github_api_timeout, repo, args.pull_request_id
+        )
+    )
 
     # Exclude already posted comments
     for comment in existing_pull_request_comments:
         review_comments = list(
             filter(
                 lambda review_comment: not (
-                    review_comment["path"] == comment["path"]
-                    and review_comment["line"] == comment["line"]
-                    and review_comment["side"] == comment["side"]
-                    and review_comment["body"] == comment["body"]
+                    review_comment["path"]
+                    == comment["path"]  # pylint: disable=cell-var-from-loop
+                    and review_comment["line"]
+                    == comment["line"]  # pylint: disable=cell-var-from-loop
+                    and review_comment["side"]
+                    == comment["side"]  # pylint: disable=cell-var-from-loop
+                    and review_comment["body"]
+                    == comment["body"]  # pylint: disable=cell-var-from-loop
                 ),
                 review_comments,
             )
         )
 
-    if len(review_comments) == 0:
-        print("No new warnings found for this pull request.")
+    if not review_comments:
+        print("No new warnings found by Clang-Tidy")
         return 0
 
-    # Split the comments in chunks to avoid overloading the server
-    # and getting 502 server errors as a response for large reviews
-    suggestions_per_comment = int(os.environ.get("INPUT_SUGGESTIONS_PER_COMMENT"))
-    review_comments = list(chunks(review_comments, suggestions_per_comment))
-    total_reviews = len(review_comments)
-    current_review = 1
-    for comments_chunk in review_comments:
-        warning_comment = warning_comment_prefix + " (%i/%i)" % (
-            current_review,
-            total_reviews,
-        )
-        current_review += 1
+    print(f"Clang-Tidy found {len(review_comments):d} new warnings")
 
-        post_review_result = requests.post(
-            pull_request_reviews_url,
-            json={
-                "body": warning_comment,
-                "event": review_event,
-                "comments": comments_chunk,
-            },
-            headers={
-                "Accept": "application/vnd.github.v3+json",
-                "Authorization": "token %s" % github_token,
-            },
-        )
-
-        if post_review_result.status_code != requests.codes.ok:
-            print(post_review_result.text)
-            # Ignore bad gateway errors (false negatives?)
-            if post_review_result.status_code != requests.codes.bad_gateway:
-                print(
-                    "Posting review comments failed with error code: "
-                    + str(post_review_result.status_code)
-                )
-                print("Please report this error to the GitHub Action maintainer")
-                return 1
-        # Wait before posting all chunks so to avoid triggering abuse detection
-        time.sleep(10)
+    post_review_comments(
+        github_api_url,
+        github_token,
+        github_api_timeout,
+        repo,
+        args.pull_request_id,
+        warning_comment_prefix,
+        review_event,
+        review_comments,
+        suggestions_per_comment,
+    )
 
     return 0
-
-
-def dismiss_change_requests(
-    pull_request_reviews_url, github_token, warning_comment_prefix
-):
-    print("Checking if there are any previous requests for changes to dismiss")
-    pull_request_reviews_result = requests.get(
-        pull_request_reviews_url,
-        headers={
-            "Accept": "application/vnd.github.v3+json",
-            "Authorization": "token %s" % github_token,
-        },
-    )
-    if pull_request_reviews_result.status_code != requests.codes.ok:
-        print(
-            "Request to get pull request reviews failed with error code: "
-            + str(pull_request_reviews_result.status_code)
-        )
-        return
-
-    pull_request_reviews_list = json.loads(pull_request_reviews_result.text)
-    # Dismiss only our own reviews
-    reviews_to_dismiss = [
-        review["id"]
-        for review in pull_request_reviews_list
-        if review["state"] == "CHANGES_REQUESTED"
-        and warning_comment_prefix in review["body"]
-        and review["user"]["login"] == "github-actions[bot]"
-    ]
-    pull_request_dismiss_url = pull_request_reviews_url + "/%d/dismissals"
-    for review_id in reviews_to_dismiss:
-        print("Dismissing review %d" % review_id)
-        dismiss_result = requests.put(
-            pull_request_dismiss_url % review_id,
-            headers={
-                "Accept": "application/vnd.github.v3+json",
-                "Authorization": "token %s" % github_token,
-            },
-            json={
-                "message": "No clang-tidy warnings found so I assume my comments were addressed",
-                "event": "DISMISS",
-            },
-        )
-        if dismiss_result.status_code != requests.codes.ok:
-            print(
-                "Request to dismiss review failed with error code: "
-                + str(dismiss_result.status_code)
-            )
-        time.sleep(1)  # Avoid triggering abuse detection
 
 
 if __name__ == "__main__":
