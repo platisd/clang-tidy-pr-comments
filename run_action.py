@@ -244,6 +244,28 @@ def generate_review_comments(
             diag_message_replacements = diag_message["Replacements"]
 
             for file_path in {item["FilePath"] for item in diag_message_replacements}:
+                # The following logic is designed to work with changes of the type:
+                #
+                # + changed line
+                # - original line
+                # [...] (in different combinations)
+                #
+                # as well as completely removed lines:
+                #
+                # - original line
+                # - original line
+                # [...]
+                #
+                # but it does not support cases like this:
+                #
+                # + new line
+                # [...]
+                #
+                # In my defense, I can say that I have never seen fixes.yml from Clang-Tidy,
+                # which would simply add new lines to the file.
+                #
+                # In case such a change does occur, assertion statements have been added.
+
                 line_num = 1
                 start_line_num = None
                 end_line_num = None
