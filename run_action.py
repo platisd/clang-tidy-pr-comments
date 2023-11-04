@@ -345,7 +345,7 @@ def generate_review_comments(
                         line_num += 1
                     # Unknown prefix, this should not happen
                     else:
-                        assert False
+                        assert False, "Please report this to the repository maintainer"
 
                 # The end of the file is reached, but there is a section to replace
                 if replacement_text is not None:
