@@ -2,9 +2,7 @@ name: actions-tagger
 
 on:
   release:
-    types:
-      - published
-      - edited
+    types: [ published, edited ]
 
 jobs:
   actions-tagger:
