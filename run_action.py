@@ -497,41 +497,58 @@ def main():
         "--clang-tidy-fixes",
         type=str,
         required=True,
-        help="The path to the Clang-Tidy fixes YAML",
+        help="Path to the Clang-Tidy fixes YAML",
     )
     parser.add_argument(
         "--pull-request-id",
         type=int,
         required=True,
-        help="The pull request ID",
+        help="Pull request ID",
+    )
+    parser.add_argument(
+        "--repository",
+        type=str,
+        required=True,
+        help="Name of the repository containing the code",
     )
     parser.add_argument(
         "--repository-root",
         type=str,
         required=True,
-        help="The path to the root of the repository containing the code",
+        help="Path to the root of the repository containing the code",
+    )
+    parser.add_argument(
+        "--request-changes",
+        type=str,
+        required=True,
+        help="If 'true', then request changes if there are warnings, otherwise leave a comment",
+    )
+    parser.add_argument(
+        "--suggestions-per-comment",
+        type=int,
+        required=True,
+        help="Number of suggestions per comment",
     )
 
     args = parser.parse_args()
 
-    repo = os.environ.get("GITHUB_REPOSITORY")
+    # The GitHub API token is sensitive information, pass it through the environment
     github_token = os.environ.get("INPUT_GITHUB_TOKEN")
-    review_event = (
-        "REQUEST_CHANGES"
-        if os.environ.get("INPUT_REQUEST_CHANGES") == "true"
-        else "COMMENT"
-    )
-    github_api_url = os.environ.get("GITHUB_API_URL")
-    suggestions_per_comment = int(os.environ.get("INPUT_SUGGESTIONS_PER_COMMENT"))
 
+    github_api_url = os.environ.get("GITHUB_API_URL")
     github_api_timeout = 10
+
     warning_comment_prefix = (
         ":warning: `Clang-Tidy` found issue(s) with the introduced code"
     )
 
     diff_lines_per_file = get_diff_lines_per_file(
         get_pull_request_files(
-            github_api_url, github_token, github_api_timeout, repo, args.pull_request_id
+            github_api_url,
+            github_token,
+            github_api_timeout,
+            args.repository,
+            args.pull_request_id,
         )
     )
 
@@ -548,7 +565,7 @@ def main():
             github_api_url,
             github_token,
             github_api_timeout,
-            repo,
+            args.repository,
             args.pull_request_id,
             warning_comment_prefix,
         )
@@ -562,7 +579,11 @@ def main():
 
     existing_pull_request_comments = list(
         get_pull_request_comments(
-            github_api_url, github_token, github_api_timeout, repo, args.pull_request_id
+            github_api_url,
+            github_token,
+            github_api_timeout,
+            args.repository,
+            args.pull_request_id,
         )
     )
 
@@ -594,12 +615,12 @@ def main():
         github_api_url,
         github_token,
         github_api_timeout,
-        repo,
+        args.repository,
         args.pull_request_id,
         warning_comment_prefix,
-        review_event,
+        "REQUEST_CHANGES" if args.request_changes == "true" else "COMMENT",
         review_comments,
-        suggestions_per_comment,
+        args.suggestions_per_comment,
     )
 
     return 0

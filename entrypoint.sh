@@ -30,4 +30,7 @@ fi
 /action/run_action.py \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
   --pull-request-id "$pull_request_id" \
-  --repository-root "$recreated_repo_dir"
+  --repository "$GITHUB_REPOSITORY" \
+  --repository-root "$recreated_repo_dir" \
+  --request-changes "$INPUT_REQUEST_CHANGES" \
+  --suggestions-per-comment "$INPUT_SUGGESTIONS_PER_COMMENT"
