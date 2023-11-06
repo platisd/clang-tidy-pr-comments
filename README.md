@@ -93,11 +93,15 @@ on: pull_request
 
 jobs:
   clang-tidy:
-    runs-on: ubuntu-20.04
-    steps:
-    - uses: actions/checkout@v2
+    runs-on: ubuntu-latest
+    - uses: actions/checkout@v4
       with:
-        fetch-depth: 2
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+    - name: Fetch base branch
+      run: |
+        git remote add upstream "https://github.com/${{ github.event.pull_request.base.repo.full_name }}"
+        git fetch --no-tags --no-recurse-submodules upstream "${{ github.event.pull_request.base.ref }}"
     - name: Install clang-tidy
       run: |
         sudo apt-get update
@@ -110,7 +114,7 @@ jobs:
         mkdir clang-tidy-result
     - name: Analyze
       run: |
-        git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
+        git diff -U0 "$(git merge-base HEAD "upstream/${{ github.event.pull_request.base.ref }}")" | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
       uses: platisd/clang-tidy-pr-comments@master
       with:
@@ -142,11 +146,16 @@ jobs:
   clang-tidy:
     # Trigger the job only when someone comments: run_clang_tidy
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run_clang_tidy') }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
-        fetch-depth: 2
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+    - name: Fetch base branch
+      run: |
+        git remote add upstream "https://github.com/${{ github.event.pull_request.base.repo.full_name }}"
+        git fetch --no-tags --no-recurse-submodules upstream "${{ github.event.pull_request.base.ref }}"
     - name: Install clang-tidy
       run: |
         sudo apt-get update
@@ -159,7 +168,7 @@ jobs:
         mkdir clang-tidy-result
     - name: Analyze
       run: |
-        git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
+        git diff -U0 "$(git merge-base HEAD "upstream/${{ github.event.pull_request.base.ref }}")" | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
       uses: platisd/clang-tidy-pr-comments@master
       with:
@@ -182,11 +191,16 @@ on: pull_request
 
 jobs:
   clang-tidy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
-        fetch-depth: 2
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+    - name: Fetch base branch
+      run: |
+        git remote add upstream "https://github.com/${{ github.event.pull_request.base.repo.full_name }}"
+        git fetch --no-tags --no-recurse-submodules upstream "${{ github.event.pull_request.base.ref }}"
     - name: Install clang-tidy
       run: |
         sudo apt-get update
@@ -199,13 +213,13 @@ jobs:
         mkdir clang-tidy-result
     - name: Analyze
       run: |
-        git diff -U0 HEAD^ | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
+        git diff -U0 "$(git merge-base HEAD "upstream/${{ github.event.pull_request.base.ref }}")" | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Save PR metadata
       run: |
-        echo ${{ github.event.number }} > clang-tidy-result/pr-id.txt
-        echo ${{ github.event.pull_request.head.repo.full_name }} > clang-tidy-result/pr-head-repo.txt
-        echo ${{ github.event.pull_request.head.ref }} > clang-tidy-result/pr-head-ref.txt
-    - uses: actions/upload-artifact@v2
+        echo "${{ github.event.number }}" > clang-tidy-result/pr-id.txt
+        echo "${{ github.event.pull_request.head.repo.full_name }}" > clang-tidy-result/pr-head-repo.txt
+        echo "${{ github.event.pull_request.head.sha }}" > clang-tidy-result/pr-head-sha.txt
+    - uses: actions/upload-artifact@v3
       with:
         name: clang-tidy-result
         path: clang-tidy-result/
@@ -224,60 +238,60 @@ jobs:
   clang-tidy-results:
     # Trigger the job only if the previous (insecure) workflow completed successfully
     if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - name: Download analysis results
-      uses: actions/github-script@v3.1.0
+      uses: actions/github-script@v6
       with:
         script: |
-          let artifacts = await github.actions.listWorkflowRunArtifacts({
+          let artifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: ${{github.event.workflow_run.id }},
+              run_id: ${{ github.event.workflow_run.id }},
           });
           let matchArtifact = artifacts.data.artifacts.filter((artifact) => {
               return artifact.name == "clang-tidy-result"
           })[0];
-          let download = await github.actions.downloadArtifact({
+          let download = await github.rest.actions.downloadArtifact({
               owner: context.repo.owner,
               repo: context.repo.repo,
               artifact_id: matchArtifact.id,
               archive_format: "zip",
           });
           let fs = require("fs");
-          fs.writeFileSync("${{github.workspace}}/clang-tidy-result.zip", Buffer.from(download.data));
+          fs.writeFileSync("${{ github.workspace }}/clang-tidy-result.zip", Buffer.from(download.data));
     - name: Set environment variables
       run: |
         mkdir clang-tidy-result
         unzip clang-tidy-result.zip -d clang-tidy-result
-        echo "pr_id=$(cat clang-tidy-result/pr-id.txt)" >> $GITHUB_ENV
-        echo "pr_head_repo=$(cat clang-tidy-result/pr-head-repo.txt)" >> $GITHUB_ENV
-        echo "pr_head_ref=$(cat clang-tidy-result/pr-head-ref.txt)" >> $GITHUB_ENV
-    - uses: actions/checkout@v2
+        echo "PR_ID=$(cat clang-tidy-result/pr-id.txt)" >> "$GITHUB_ENV"
+        echo "PR_HEAD_REPO=$(cat clang-tidy-result/pr-head-repo.txt)" >> "$GITHUB_ENV"
+        echo "PR_HEAD_SHA=$(cat clang-tidy-result/pr-head-sha.txt)" >> "$GITHUB_ENV"
+    - uses: actions/checkout@v4
       with:
-        repository: ${{ env.pr_head_repo }}
-        ref: ${{ env.pr_head_ref }}
+        repository: ${{ env.PR_HEAD_REPO }}
+        ref: ${{ env.PR_HEAD_SHA }}
         persist-credentials: false
     - name: Redownload analysis results
-      uses: actions/github-script@v3.1.0
+      uses: actions/github-script@v6
       with:
         script: |
-          let artifacts = await github.actions.listWorkflowRunArtifacts({
+          let artifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: ${{github.event.workflow_run.id }},
+              run_id: ${{ github.event.workflow_run.id }},
           });
           let matchArtifact = artifacts.data.artifacts.filter((artifact) => {
               return artifact.name == "clang-tidy-result"
           })[0];
-          let download = await github.actions.downloadArtifact({
+          let download = await github.rest.actions.downloadArtifact({
               owner: context.repo.owner,
               repo: context.repo.repo,
               artifact_id: matchArtifact.id,
               archive_format: "zip",
           });
           let fs = require("fs");
-          fs.writeFileSync("${{github.workspace}}/clang-tidy-result.zip", Buffer.from(download.data));
+          fs.writeFileSync("${{ github.workspace }}/clang-tidy-result.zip", Buffer.from(download.data));
     - name: Extract analysis results
       run: |
         mkdir clang-tidy-result
@@ -287,7 +301,7 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         clang_tidy_fixes: clang-tidy-result/fixes.yml
-        pull_request_id: ${{ env.pr_id }}
+        pull_request_id: ${{ env.PR_ID }}
 ```
 
 ## Who's using this action?
