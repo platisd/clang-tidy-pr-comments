@@ -315,6 +315,7 @@ Add your project to the list below by opening a pull request or asking for it on
 | [Orbit](https://github.com/google/orbit/blob/main/.github/workflows/report-build-and-test.yml)                 | CMake + Qt     |
 | [Smartcar shield](https://github.com/platisd/smartcar_shield/blob/master/.github/workflows/tests.yml)          | CMake          |
 | [cpp-command-parser](https://github.com/platisd/cpp-command-parser/blob/main/.github/workflows/clang-tidy.yml) | CMake          |
+| [fheroes2](https://github.com/ihhub/fheroes2/blob/master/.github/workflows/clang_tidy_comments.yml)            | CMake          |
 
 [clang-tidy-8 support]: https://img.shields.io/badge/clang--tidy-8-green
 [clang-tidy-9 support]: https://img.shields.io/badge/clang--tidy-9-green
