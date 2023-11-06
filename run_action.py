@@ -608,7 +608,7 @@ def main():
         print("No new warnings found by Clang-Tidy")
         return 0
 
-    print(f"Clang-Tidy found {len(review_comments):d} new warnings")
+    print(f"Clang-Tidy found {len(review_comments):d} new warning(s)")
 
     post_review_comments(
         github_api_url,
