@@ -93,7 +93,7 @@ on: pull_request
 
 jobs:
   clang-tidy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     - uses: actions/checkout@v4
       with:
         ref: ${{ github.event.pull_request.head.sha }}
@@ -146,7 +146,7 @@ jobs:
   clang-tidy:
     # Trigger the job only when someone comments: run_clang_tidy
     if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'run_clang_tidy') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -191,7 +191,7 @@ on: pull_request
 
 jobs:
   clang-tidy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -238,7 +238,7 @@ jobs:
   clang-tidy-results:
     # Trigger the job only if the previous (insecure) workflow completed successfully
     if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - name: Download analysis results
       uses: actions/github-script@v6
