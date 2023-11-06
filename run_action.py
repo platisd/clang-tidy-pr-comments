@@ -3,7 +3,6 @@
 """Runner of the 'pull request comments from Clang-Tidy reports' action"""
 
 import argparse
-import copy
 import difflib
 import json
 import os
@@ -132,7 +131,7 @@ def generate_review_comments(
         with open(repository_root + file_path, encoding="latin_1") as file:
             source_file = file.read()
 
-        changed_file = copy.deepcopy(source_file)
+        changed_file = source_file
 
         for replacement in replacements:
             changed_file = (
