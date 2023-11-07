@@ -116,7 +116,7 @@ jobs:
       run: |
         git diff -U0 "$(git merge-base HEAD "upstream/${{ github.event.pull_request.base.ref }}")" | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
-      uses: platisd/clang-tidy-pr-comments@master
+      uses: platisd/clang-tidy-pr-comments@v1
       with:
         # The GitHub token (or a personal access token)
         github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -170,7 +170,7 @@ jobs:
       run: |
         git diff -U0 "$(git merge-base HEAD "upstream/${{ github.event.pull_request.base.ref }}")" | clang-tidy-diff -p1 -path build -export-fixes clang-tidy-result/fixes.yml
     - name: Run clang-tidy-pr-comments action
-      uses: platisd/clang-tidy-pr-comments@master
+      uses: platisd/clang-tidy-pr-comments@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         clang_tidy_fixes: clang-tidy-result/fixes.yml
@@ -297,7 +297,7 @@ jobs:
         mkdir clang-tidy-result
         unzip clang-tidy-result.zip -d clang-tidy-result
     - name: Run clang-tidy-pr-comments action
-      uses: platisd/clang-tidy-pr-comments@master
+      uses: platisd/clang-tidy-pr-comments@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         clang_tidy_fixes: clang-tidy-result/fixes.yml
