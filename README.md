@@ -7,6 +7,7 @@
 [![clang-tidy-12 support]](https://releases.llvm.org/12.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
 [![clang-tidy-13 support]](https://releases.llvm.org/13.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
 [![clang-tidy-14 support]](https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-15 support]](https://releases.llvm.org/15.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
 
 A GitHub Action to post `clang-tidy` warnings and suggestions as review comments on your pull request.
 
@@ -74,6 +75,7 @@ YAML files containing generated fixes by the following `clang-tidy` versions are
 * `clang-tidy-12`
 * `clang-tidy-13`
 * `clang-tidy-14`
+* `clang-tidy-15`
 
 ## How
 
@@ -324,3 +326,4 @@ Add your project to the list below by opening a pull request or asking for it on
 [clang-tidy-12 support]: https://img.shields.io/badge/clang--tidy-12-green
 [clang-tidy-13 support]: https://img.shields.io/badge/clang--tidy-13-green
 [clang-tidy-14 support]: https://img.shields.io/badge/clang--tidy-14-green
+[clang-tidy-15 support]: https://img.shields.io/badge/clang--tidy-15-green
