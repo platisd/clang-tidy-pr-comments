@@ -243,28 +243,6 @@ def generate_review_comments(
             diag_message_replacements = diag_message["Replacements"]
 
             for file_path in {item["FilePath"] for item in diag_message_replacements}:
-                # The following logic is designed to work with changes of the type:
-                #
-                # + changed line
-                # - original line
-                # [...] (in different combinations)
-                #
-                # as well as completely removed lines:
-                #
-                # - original line
-                # - original line
-                # [...]
-                #
-                # but it does not support cases like this:
-                #
-                # + new line
-                # [...]
-                #
-                # In my defense, I can say that I have never seen fixes.yml from Clang-Tidy,
-                # which would simply add new lines to the file.
-                #
-                # In case such a change does occur, assertion statements have been added.
-
                 line_num = 1
                 start_line_num = None
                 end_line_num = None
@@ -311,9 +289,18 @@ def generate_review_comments(
                     # end of the section to replace
                     elif line.startswith("  "):
                         if replacement_text is not None:
-                            assert (
-                                start_line_num is not None and end_line_num is not None
-                            )
+                            # If there is a replacement text, but there is no information about
+                            # the section to replace, then this is not a replacement, but a pure
+                            # addition of text. Add the current line to the end of the replacement
+                            # text and "replace" it with the replacement text.
+                            if start_line_num is None:
+                                assert end_line_num is None
+
+                                start_line_num = line_num
+                                end_line_num = line_num
+                                replacement_text += line[2:]
+                            else:
+                                assert end_line_num is not None
 
                             print(
                                 # pylint: disable=line-too-long
@@ -348,7 +335,12 @@ def generate_review_comments(
 
                 # The end of the file is reached, but there is a section to replace
                 if replacement_text is not None:
-                    assert start_line_num is not None and end_line_num is not None
+                    # Pure addition of text to the end of the file is not currently supported. If
+                    # you have an example of a Clang-Tidy replacement of this kind, please contact
+                    # the repository maintainer.
+                    assert (
+                        start_line_num is not None and end_line_num is not None
+                    ), "Please report this to the repository maintainer"
 
                     print(
                         # pylint: disable=line-too-long
