@@ -87,7 +87,7 @@ def get_pull_request_files(
 def get_pull_request_comments(
     github_api_url, github_token, github_api_timeout, repo, pull_request_id
 ):
-    """GitHub metadata generator about comments to the processed PR"""
+    """Generator of GitHub metadata about comments to the processed PR"""
 
     # Request a maximum of 100 pages (3000 files)
     for page in range(1, 101):
