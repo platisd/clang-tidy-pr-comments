@@ -15,9 +15,9 @@ import requests
 import yaml
 
 
-def get_diff_lines_per_file(pr_files):
-    """Generates and returns a set of affected line numbers for each file that has been modified
-    by the processed PR"""
+def get_diff_line_ranges_per_file(pr_files):
+    """Generates and returns a list of line ranges affected by the corresponding patch hunks for
+    each file that has been modified by the processed PR"""
 
     def change_to_line_range(change):
         split_change = change.split(",")
@@ -49,10 +49,9 @@ def get_diff_lines_per_file(pr_files):
             for tag in git_line_tags
         ]
 
-        result[file_name] = set()
-        for lines in [change_to_line_range(change) for change in changes]:
-            for line in lines:
-                result[file_name].add(line)
+        result[file_name] = []
+        for line_range in [change_to_line_range(change) for change in changes]:
+            result[file_name].append(line_range)
 
     return result
 
@@ -112,7 +111,7 @@ def get_pull_request_comments(
 
 
 def generate_review_comments(
-    clang_tidy_fixes, repository_root, diff_lines_per_file
+    clang_tidy_fixes, repository_root, diff_line_ranges_per_file
 ):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """Generator of the Clang-Tidy review comments"""
 
@@ -122,6 +121,25 @@ def generate_review_comments(
             source_file = file.read()
 
         return source_file[:offset].count("\n") + 1
+
+    def validate_warning_applicability(
+        diff_line_ranges_per_file, file_path, start_line_num, end_line_num
+    ):
+        assert end_line_num >= start_line_num
+
+        if file_path not in diff_line_ranges_per_file:
+            return False
+
+        for line_range in diff_line_ranges_per_file[file_path]:
+            assert line_range.step == 1
+
+            if (
+                line_range.start <= start_line_num < line_range.stop
+                and end_line_num < line_range.stop
+            ):
+                return True
+
+        return False
 
     def calculate_replacements_diff(repository_root, file_path, replacements):
         # Apply the replacements in reverse order so that subsequent offsets are not shifted
@@ -230,9 +248,8 @@ def generate_review_comments(
 
             print(f"Processing '{diag_name}' at line {line_num:d} of {file_path}...")
 
-            if (
-                file_path in diff_lines_per_file
-                and line_num in diff_lines_per_file[file_path]
+            if validate_warning_applicability(
+                diff_line_ranges_per_file, file_path, line_num, line_num
             ):
                 yield generate_single_comment(
                     file_path, line_num, line_num, diag_name, diag_message_msg
@@ -307,9 +324,11 @@ def generate_review_comments(
                                 f"Processing '{diag_name}' at lines {start_line_num:d}-{end_line_num:d} of {file_path}..."
                             )
 
-                            if (
-                                file_path in diff_lines_per_file
-                                and start_line_num in diff_lines_per_file[file_path]
+                            if validate_warning_applicability(
+                                diff_line_ranges_per_file,
+                                file_path,
+                                start_line_num,
+                                end_line_num,
                             ):
                                 yield generate_single_comment(
                                     file_path,
@@ -347,9 +366,11 @@ def generate_review_comments(
                         f"Processing '{diag_name}' at lines {start_line_num:d}-{end_line_num:d} of {file_path}..."
                     )
 
-                    if (
-                        file_path in diff_lines_per_file
-                        and start_line_num in diff_lines_per_file[file_path]
+                    if validate_warning_applicability(
+                        diff_line_ranges_per_file,
+                        file_path,
+                        start_line_num,
+                        end_line_num,
                     ):
                         yield generate_single_comment(
                             file_path,
@@ -533,7 +554,7 @@ def main():
         ":warning: `Clang-Tidy` found issue(s) with the introduced code"
     )
 
-    diff_lines_per_file = get_diff_lines_per_file(
+    diff_line_ranges_per_file = get_diff_line_ranges_per_file(
         get_pull_request_files(
             github_api_url,
             github_token,
@@ -564,7 +585,7 @@ def main():
 
     review_comments = list(
         generate_review_comments(
-            clang_tidy_fixes, args.repository_root + "/", diff_lines_per_file
+            clang_tidy_fixes, args.repository_root + "/", diff_line_ranges_per_file
         )
     )
 
