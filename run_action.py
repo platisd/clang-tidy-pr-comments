@@ -133,10 +133,7 @@ def generate_review_comments(
         for line_range in diff_line_ranges_per_file[file_path]:
             assert line_range.step == 1
 
-            if (
-                line_range.start <= start_line_num < line_range.stop
-                and end_line_num < line_range.stop
-            ):
+            if line_range.start <= start_line_num and end_line_num < line_range.stop:
                 return True
 
         return False
