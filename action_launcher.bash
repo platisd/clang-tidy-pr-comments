@@ -2,7 +2,7 @@
 
 set -eu
 
-if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
+if [ -z "${INPUT_PULL_REQUEST_ID:-}" ]; then
   pull_request_id="$(jq "if (.issue.number != null) then .issue.number else .number end" < "$GITHUB_EVENT_PATH")"
 
   if [ "$pull_request_id" == "null" ]; then
@@ -27,7 +27,7 @@ if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
   exit 0
 fi
 
-/action/run_action.py \
+ "${GITHUB_ACTION_PATH}/venv/bin/python" "${GITHUB_ACTION_PATH}/run_action.py" \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
   --pull-request-id "$pull_request_id" \
   --repository "$GITHUB_REPOSITORY" \
