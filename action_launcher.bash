@@ -27,7 +27,7 @@ if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
   exit 0
 fi
 
-${GITHUB_ACTION_PATH}/run_action.py \
+"${GITHUB_ACTION_PATH}/run_action.py" \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
   --pull-request-id "$pull_request_id" \
   --repository "$GITHUB_REPOSITORY" \
