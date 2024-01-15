@@ -35,7 +35,7 @@ runs:
         python-version: "3.11"
         update-environment: false
     - name: Setup venv
-      run: ${{ steps.outputs.setup-python.python-path }} -m venv ${GITHUB_ACTION_PATH}/venv
+      run: ${{ steps.setup-python.outputs.python-path }} -m venv ${GITHUB_ACTION_PATH}/venv
 
       shell: bash -l {0}
     - name: Install dependencies
