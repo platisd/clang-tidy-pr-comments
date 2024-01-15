@@ -1,0 +1,37 @@
+on:
+  pull_request:
+    branches:
+      - master
+
+env:
+  CLANG_TIDY_VERSION: 17.0.4
+  CMAKE_VERSION: 3.21.3
+  PYTHON_VERSION: 3.12
+
+jobs:
+  check_action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "${{ env.PYTHON_VERSION }}"
+      - name: Install dependencies
+        run: |
+          pip install clang-tidy==${CLANG_TIDY_VERSION} cmake==${CMAKE_VERSION}
+      - name: Configure Test project
+        run: |
+          mkdir build
+          cd build
+          cmake ../tests
+      - name: Run clang-tidy
+        run: |
+          cd build
+          cmake --build . --target clang-tidy
+      - name: Test Suggest Fixes
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          request_change: false
+          clang_tidy_fixes: build/fixes.yaml
+          python_version: "${{ env.PYTHON_VERSION }}"
