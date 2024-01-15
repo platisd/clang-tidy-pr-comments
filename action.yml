@@ -44,6 +44,13 @@ runs:
     - name: Run action
       run: ${GITHUB_ACTION_PATH}/action_launcher.bash
       shell: bash -l {0}
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_CLANG_TIDY_FIXES: ${{ inputs.clang_tidy_fixes }}
+        INPUT_PULL_REQUEST_ID: ${{ inputs.pull_request_id }}
+        INPUT_REQUEST_CHANGES: ${{ inputs.request_changes }}
+        INPUT_SUGGESTIONS_PER_COMMENT: ${{ inputs.suggestions_per_comment }}
+        INPUT_REPO_PATH_PREFIX: ${{ inputs.repo_path_prefix }}
 branding:
   icon: 'cpu'
   color: 'green'
