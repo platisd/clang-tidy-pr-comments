@@ -39,7 +39,7 @@ runs:
 
       shell: bash -l {0}
     - name: Install dependencies
-      run: ${GITHUB_ACTION_PATH}/venv/python -m pip install -r ${GITHUB_ACTION_PATH}/requirements.txt
+      run: ${GITHUB_ACTION_PATH}/venv/bin/python -m pip install -r ${GITHUB_ACTION_PATH}/requirements.txt
       shell: bash -l {0}
     - name: Run action
       run: ${GITHUB_ACTION_PATH}/action_launcher.bash
