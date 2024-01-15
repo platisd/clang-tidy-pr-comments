@@ -23,20 +23,23 @@ inputs:
     description: 'The path to repo when code is analyzed with clang-tidy; may set to "/__w" for users who run clang-tidy in a docker container'
     required: false
     default: '/home/runner/work'
-  python_version:
-    description: 'Python version to use'
-    required: false
-    default: '3.12'
+
 
 runs:
   using: 'composite'
   steps:
     - name: Setup Python
       uses: actions/setup-python@v5
+      id: setup-python
       with:
-        python-version: ${{ inputs.python_version }}
+        python-version: "3.11"
+        update-environment: false
+    - name: Setup venv
+      run: ${{ steps.outputs.setup-python.python-path }} -m venv ${GITHUB_ACTION_PATH}/venv
+
+      shell: bash -l {0}
     - name: Install dependencies
-      run: python -m pip install -r ${GITHUB_ACTION_PATH}/requirements.txt
+      run: ${GITHUB_ACTION_PATH}/venv/python -m pip install -r ${GITHUB_ACTION_PATH}/requirements.txt
       shell: bash -l {0}
     - name: Run action
       run: ${GITHUB_ACTION_PATH}/action_launcher.bash
