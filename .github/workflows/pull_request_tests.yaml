@@ -35,6 +35,6 @@ jobs:
         uses: ./
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          request_change: false
+          request_changes: false
           clang_tidy_fixes: build/fixes.yaml
           python_version: "${{ env.PYTHON_VERSION }}"
