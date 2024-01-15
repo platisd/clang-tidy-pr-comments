@@ -1,4 +1,9 @@
+int other()
+{
+
+}
+
 int main()
 {
-    return int{0};
+    return other();
 }

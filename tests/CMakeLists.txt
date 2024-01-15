@@ -7,6 +7,6 @@ add_executable(clang_tidy_pr_comments_test
   )
 
 # run clang-tidy on this file
-add_custom_command(TARGET clang-tidy
+add_custom_target(clang-tidy
   COMMAND clang-tidy -p ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp --export-fixes=${CMAKE_BINARY_DIR}/fixes.yaml
   )
