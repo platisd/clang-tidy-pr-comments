@@ -433,7 +433,7 @@ def post_review_comments(
         assert result.status_code in (
             requests.codes.ok,  # pylint: disable=no-member
             requests.codes.bad_gateway,  # pylint: disable=no-member
-        )
+        ), f"Unexpected status code: {result.status_code:d}"
 
         # Avoid triggering abuse detection
         time.sleep(10)
