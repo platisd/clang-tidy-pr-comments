@@ -6,7 +6,7 @@ on:
       - master
 
 env:
-  CLANG_TIDY_VERSION: 17.0.4
+  CLANG_TIDY_VERSION: 17.0.1
   CMAKE_VERSION: 3.21.3
   PYTHON_VERSION: 3.12
 
