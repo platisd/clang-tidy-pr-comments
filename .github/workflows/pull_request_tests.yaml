@@ -2,9 +2,9 @@ name: Test Action in CI
 
 on:
   push:
-    branches:
-      - master
-  workflow_dispatch:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 env:
   CLANG_TIDY_VERSION: 17.0.1
