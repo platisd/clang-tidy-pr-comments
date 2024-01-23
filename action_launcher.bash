@@ -2,7 +2,7 @@
 
 set -eu
 
-if [ -z "${INPUT_PULL_REQUEST_ID:-}" ]; then
+if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
   pull_request_id="$(jq "if (.issue.number != null) then .issue.number else .number end" < "$GITHUB_EVENT_PATH")"
 
   if [ "$pull_request_id" == "null" ]; then
