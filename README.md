@@ -221,7 +221,7 @@ jobs:
         echo "${{ github.event.number }}" > clang-tidy-result/pr-id.txt
         echo "${{ github.event.pull_request.head.repo.full_name }}" > clang-tidy-result/pr-head-repo.txt
         echo "${{ github.event.pull_request.head.sha }}" > clang-tidy-result/pr-head-sha.txt
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: clang-tidy-result
         path: clang-tidy-result/
@@ -243,7 +243,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - name: Download analysis results
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           let artifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -265,7 +265,7 @@ jobs:
     - name: Set environment variables
       run: |
         mkdir clang-tidy-result
-        unzip clang-tidy-result.zip -d clang-tidy-result
+        unzip -j clang-tidy-result.zip -d clang-tidy-result
         echo "PR_ID=$(cat clang-tidy-result/pr-id.txt)" >> "$GITHUB_ENV"
         echo "PR_HEAD_REPO=$(cat clang-tidy-result/pr-head-repo.txt)" >> "$GITHUB_ENV"
         echo "PR_HEAD_SHA=$(cat clang-tidy-result/pr-head-sha.txt)" >> "$GITHUB_ENV"
@@ -275,7 +275,7 @@ jobs:
         ref: ${{ env.PR_HEAD_SHA }}
         persist-credentials: false
     - name: Redownload analysis results
-      uses: actions/github-script@v6
+      uses: actions/github-script@v7
       with:
         script: |
           let artifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -297,7 +297,7 @@ jobs:
     - name: Extract analysis results
       run: |
         mkdir clang-tidy-result
-        unzip clang-tidy-result.zip -d clang-tidy-result
+        unzip -j clang-tidy-result.zip -d clang-tidy-result
     - name: Run clang-tidy-pr-comments action
       uses: platisd/clang-tidy-pr-comments@v1
       with:
