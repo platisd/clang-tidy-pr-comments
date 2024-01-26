@@ -35,15 +35,15 @@ runs:
     - name: Setup venv
       run: |
         "${{ steps.setup-python.outputs.python-path }}" -m venv "${GITHUB_ACTION_PATH}/venv"
-      shell: bash -l {0}
+      shell: bash
     - name: Install dependencies
       run: |
         "${GITHUB_ACTION_PATH}/venv/bin/python" -m pip install -r "${GITHUB_ACTION_PATH}/requirements.txt"
-      shell: bash -l {0}
+      shell: bash
     - name: Run action
       run: |
         "${GITHUB_ACTION_PATH}/action_launcher.bash"
-      shell: bash -l {0}
+      shell: bash
       env:
         INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
         INPUT_CLANG_TIDY_FIXES: ${{ inputs.clang_tidy_fixes }}
