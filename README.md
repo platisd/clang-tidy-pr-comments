@@ -199,8 +199,6 @@ on: pull_request
 jobs:
   clang-tidy:
     runs-on: ubuntu-22.04
-    permissions:
-      pull-requests: write
     steps:
     - uses: actions/checkout@v4
       with:
