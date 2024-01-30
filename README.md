@@ -328,16 +328,7 @@ jobs:
 
 ## Who's using this action?
 
-Are you using this action in your project? Got some interesting use case?<br>
-Add your project to the list below by opening a pull request or asking for it on an issue.
-
-| Project                                                                                                        | Workflow       |
-|----------------------------------------------------------------------------------------------------------------|----------------|
-| [Cura](https://github.com/Ultimaker/Cura/blob/main/.github/workflows/printer-linter-pr-post.yml)               | printer-linter |
-| [Orbit](https://github.com/google/orbit/blob/main/.github/workflows/report-build-and-test.yml)                 | CMake + Qt     |
-| [Smartcar shield](https://github.com/platisd/smartcar_shield/blob/master/.github/workflows/tests.yml)          | CMake          |
-| [cpp-command-parser](https://github.com/platisd/cpp-command-parser/blob/main/.github/workflows/clang-tidy.yml) | CMake          |
-| [fheroes2](https://github.com/ihhub/fheroes2/blob/master/.github/workflows/clang_tidy_comments.yml)            | CMake          |
+See the [Action dependency graph](https://github.com/platisd/clang-tidy-pr-comments/network/dependents).
 
 [clang-tidy-8 support]: https://img.shields.io/badge/clang--tidy-8-green
 [clang-tidy-9 support]: https://img.shields.io/badge/clang--tidy-9-green
