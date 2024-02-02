@@ -561,8 +561,15 @@ def main():
         )
     )
 
-    with open(args.clang_tidy_fixes, encoding="utf_8") as file:
-        clang_tidy_fixes = yaml.safe_load(file)
+    if os.path.isfile(args.clang_tidy_fixes):
+        with open(args.clang_tidy_fixes, encoding="utf_8") as file:
+            clang_tidy_fixes = yaml.safe_load(file)
+    else:
+        print(
+            # pylint: disable=line-too-long
+            f"Could not find the clang-tidy fixes file '{args.clang_tidy_fixes}', it is assumed that it was not generated"
+        )
+        clang_tidy_fixes = None
 
     if (
         clang_tidy_fixes is None

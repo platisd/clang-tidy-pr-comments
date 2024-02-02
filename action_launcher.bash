@@ -22,11 +22,6 @@ ln -s "$(pwd)" "$recreated_repo_dir"
 
 cd "$recreated_repo_dir"
 
-if [ ! -f "$INPUT_CLANG_TIDY_FIXES" ]; then
-  echo "Could not find the clang-tidy fixes file '$INPUT_CLANG_TIDY_FIXES'. Perhaps it wasn't created?"
-  exit 0
-fi
-
 "${GITHUB_ACTION_PATH}/venv/bin/python" "${GITHUB_ACTION_PATH}/run_action.py" \
   --clang-tidy-fixes "$INPUT_CLANG_TIDY_FIXES" \
   --pull-request-id "$pull_request_id" \
