@@ -61,7 +61,7 @@ def get_pull_request_files(
 ):
     """Generator of GitHub metadata about files modified by the processed PR"""
 
-    # Request a maximum of 100 pages (3000 files)
+    # Request a maximum of 100 pages (3000 items)
     for page in range(1, 101):
         result = requests.get(
             f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/files?page={page:d}",
@@ -88,7 +88,7 @@ def get_pull_request_comments(
 ):
     """Generator of GitHub metadata about comments to the processed PR"""
 
-    # Request a maximum of 100 pages (3000 files)
+    # Request a maximum of 100 pages (3000 items)
     for page in range(1, 101):
         result = requests.get(
             f"{github_api_url}/repos/{repo}/pulls/{pull_request_id:d}/comments?page={page:d}",
