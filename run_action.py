@@ -76,7 +76,7 @@ def get_pull_request_files(
 
         chunk = json.loads(result.text)
 
-        if len(chunk) == 0:
+        if not chunk:
             break
 
         for item in chunk:
@@ -103,7 +103,7 @@ def get_pull_request_comments(
 
         chunk = json.loads(result.text)
 
-        if len(chunk) == 0:
+        if not chunk:
             break
 
         for item in chunk:
@@ -573,8 +573,8 @@ def main():
 
     if (
         clang_tidy_fixes is None
-        or "Diagnostics" not in clang_tidy_fixes.keys()
-        or len(clang_tidy_fixes["Diagnostics"]) == 0
+        or "Diagnostics" not in clang_tidy_fixes
+        or not clang_tidy_fixes["Diagnostics"]
     ):
         print("No warnings found by Clang-Tidy")
         dismiss_change_requests(
