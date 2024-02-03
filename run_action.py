@@ -566,8 +566,8 @@ def main():
             clang_tidy_fixes = yaml.safe_load(file)
     else:
         print(
-            # pylint: disable=line-too-long
-            f"Could not find the clang-tidy fixes file '{args.clang_tidy_fixes}', it is assumed that it was not generated"
+            f"Could not find the clang-tidy fixes file '{args.clang_tidy_fixes}',"
+            " it is assumed that it was not generated"
         )
         clang_tidy_fixes = None
 
