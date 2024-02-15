@@ -523,7 +523,7 @@ def resolve_conversations(
         pull_request_id,
     ):
         pprint.pprint(f"Checking conversation {conversation}")
-        if warning_comment_prefix in conversation["body"]:
+        if conversation["body"].startswith(":warning:"):
             print(f"Resolving conversation {conversation['id']}")
             result = requests.patch(
                 f"{github_api_url}/repos/{repo}/pulls/comments/{conversation['id']}",
