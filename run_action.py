@@ -494,6 +494,46 @@ def dismiss_change_requests(
 
         # Avoid triggering abuse detection
         time.sleep(10)
+    resolve_conversations(
+        github_api_url,
+        github_token,
+        github_api_timeout,
+        repo,
+        pull_request_id,
+        warning_comment_prefix,
+    )
+
+
+def resolve_conversations(
+    github_api_url,
+    github_token,
+    github_api_timeout,
+    repo,
+    pull_request_id,
+    warning_comment_prefix,
+):
+    """Resolving stale conversations"""
+    for conversation in get_pull_request_comments(
+        github_api_url,
+        github_token,
+        github_api_timeout,
+        repo,
+        pull_request_id,
+    ):
+        if warning_comment_prefix in conversation["body"]:
+            print(f"Resolving conversation {conversation['id']}")
+            result = requests.patch(
+                f"{github_api_url}/repos/{repo}/pulls/comments/{conversation['id']}",
+                headers={
+                    "Accept": "application/vnd.github.v3+json",
+                    "Authorization": f"token {github_token}",
+                },
+                json={
+                    "body": "No Clang-Tidy warnings found so I assume my comments were addressed",
+                },
+                timeout=github_api_timeout,
+            )
+            assert result.status_code == requests.codes.ok
 
 
 def main():
