@@ -7,6 +7,7 @@ import difflib
 import json
 import os
 import posixpath
+import pprint
 import re
 import sys
 import time
@@ -494,6 +495,7 @@ def dismiss_change_requests(
 
         # Avoid triggering abuse detection
         time.sleep(10)
+
     resolve_conversations(
         github_api_url,
         github_token,
@@ -520,6 +522,7 @@ def resolve_conversations(
         repo,
         pull_request_id,
     ):
+        pprint.pprint(f"Checking conversation {conversation}")
         if warning_comment_prefix in conversation["body"]:
             print(f"Resolving conversation {conversation['id']}")
             result = requests.patch(
