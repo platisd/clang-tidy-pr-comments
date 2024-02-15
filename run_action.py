@@ -495,6 +495,117 @@ def dismiss_change_requests(
         # Avoid triggering abuse detection
         time.sleep(10)
 
+    resolve_conversations(
+        github_token=github_token,
+        repo=repo,
+        pull_request_id=pull_request_id,
+        warning_comment_prefix=warning_comment_prefix,
+    )
+
+
+def conversation_threads_to_close(repo, pr_number, github_token):
+    repo_owner, repo_name = repo.split("/")
+    query = """
+    query {
+      repository(owner: "%s", name: "%s") {
+        pullRequest(number: %d) {
+          id
+          reviewThreads(last: 100) {
+            nodes {
+              id
+              isResolved
+              comments(first: 1) {
+                nodes {
+                  id
+                  body
+                  author {
+                    login
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """ % (
+        repo_owner,
+        repo_name,
+        pr_number,
+    )
+
+    response = requests.post(
+        "https://api.github.com/graphql",
+        json={"query": query},
+        headers={"Authorization": "Bearer " + github_token},
+    )
+
+    if response.status_code == 200:
+        data = response.json()
+
+        # Iterate through review threads
+        for thread in data["data"]["repository"]["pullRequest"]["reviewThreads"][
+            "nodes"
+        ]:
+            for comment in thread["comments"]["nodes"]:
+                if (
+                    comment["id"]
+                    and thread["isResolved"] is False
+                    # this actor here is somehow different from `github-actions[bot]` which we get through the Rest API
+                    and comment["author"]["login"] == "github-actions"
+                ):
+                    yield thread
+                    break
+    else:
+        print("Error getting unresolved conversation threads:", response.status_code)
+
+
+def close_conversation(repo, thread_id, github_token):
+    mutation = (
+        """
+    mutation {
+      resolveReviewThread(input: {threadId: "%s", clientMutationId: "github-actions"}) {
+        thread {
+          id
+        }
+      }
+    }
+    """
+        % thread_id
+    )
+
+    print(f"::debug::Closing conversation {thread_id}...")
+    response = requests.post(
+        "https://api.github.com/graphql",
+        json={"query": mutation},
+        headers={"Authorization": "Bearer " + github_token},
+    )
+
+    if response.status_code == 200:
+        if "errors" in response.json():
+            msg = response.json()["errors"][0]["message"]
+            if "Resource not accessible by integration" in msg:
+                print(
+                    "::notice::Closing conversations requires `contents: write` permission. See Readme.md"
+                )
+            else:
+                print(f"::error::Closing conversation query failed: {msg}")
+        else:
+            print("Conversation closed successfully.")
+    else:
+        print(f"::error::GraphQL request failed: {response.status_code}")
+
+
+def resolve_conversations(
+    github_token,
+    repo,
+    pull_request_id,
+    warning_comment_prefix,
+):
+    """Resolving stale conversations"""
+    for thread in conversation_threads_to_close(repo, pull_request_id, github_token):
+        close_conversation(repo=repo, thread_id=thread["id"], github_token=github_token)
+
 
 def main():
     """Entry point"""
