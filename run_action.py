@@ -499,10 +499,17 @@ def dismiss_change_requests(
             github_token=github_token,
             repo=repo,
             pull_request_id=pull_request_id,
+            github_api_timeout=github_api_timeout,
         )
 
 
-def conversation_threads_to_close(repo, pr_number, github_token):
+def conversation_threads_to_close(repo, pr_number, github_token, github_api_timeout):
+    """Generator of unresolved conversation threads to close
+
+    Uses the GitHub GraphQL API to get conversation threads for the given PR.
+    Then filters for unresolved threads and those that have been created by the action.
+    """
+
     repo_owner, repo_name = repo.split("/")
     query = """
     query {
@@ -537,6 +544,7 @@ def conversation_threads_to_close(repo, pr_number, github_token):
         "https://api.github.com/graphql",
         json={"query": query},
         headers={"Authorization": "Bearer " + github_token},
+        timeout=github_api_timeout,
     )
 
     if response.status_code == 200:
@@ -550,7 +558,8 @@ def conversation_threads_to_close(repo, pr_number, github_token):
                 if (
                     comment["id"]
                     and thread["isResolved"] is False
-                    # this actor here is somehow different from `github-actions[bot]` which we get through the Rest API
+                    # this actor here is somehow different from `github-actions[bot]`
+                    # which we get through the Rest API
                     and comment["author"]["login"] == "github-actions"
                 ):
                     yield thread
@@ -559,7 +568,8 @@ def conversation_threads_to_close(repo, pr_number, github_token):
         print("Error getting unresolved conversation threads:", response.status_code)
 
 
-def close_conversation(repo, thread_id, github_token):
+def close_conversation(thread_id, github_token, github_api_timeout):
+    """Close a conversation thread using the GitHub GraphQL API"""
     mutation = (
         """
     mutation {
@@ -578,6 +588,7 @@ def close_conversation(repo, thread_id, github_token):
         "https://api.github.com/graphql",
         json={"query": mutation},
         headers={"Authorization": "Bearer " + github_token},
+        timeout=github_api_timeout,
     )
 
     if response.status_code == 200:
@@ -585,20 +596,31 @@ def close_conversation(repo, thread_id, github_token):
             msg = response.json()["errors"][0]["message"]
             if "Resource not accessible by integration" in msg:
                 print(
-                    "::notice::Closing conversations requires `contents: write` permission. See Readme.md"
+                    "::error::Closing conversations requires `contents: write` permission."
                 )
             else:
                 print(f"::error::Closing conversation query failed: {msg}")
         else:
             print("Conversation closed successfully.")
+            return
     else:
         print(f"::error::GraphQL request failed: {response.status_code}")
+    print(
+        "::error:: Failed to close conversation. See log for details and"
+        "https://github.com/platisd/clang-tidy-pr-comments/blob/master/README.md for help"
+    )
 
 
-def resolve_conversations(github_token, repo, pull_request_id):
+def resolve_conversations(github_token, repo, pull_request_id, github_api_timeout):
     """Resolving stale conversations"""
-    for thread in conversation_threads_to_close(repo, pull_request_id, github_token):
-        close_conversation(repo=repo, thread_id=thread["id"], github_token=github_token)
+    for thread in conversation_threads_to_close(
+        repo, pull_request_id, github_token, github_api_timeout
+    ):
+        close_conversation(
+            thread_id=thread["id"],
+            github_token=github_token,
+            github_api_timeout=github_api_timeout,
+        )
 
 
 def main():
