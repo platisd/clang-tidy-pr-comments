@@ -446,6 +446,7 @@ def dismiss_change_requests(
     repo,
     pull_request_id,
     warning_comment_prefix,
+    auto_resolve_conversations,
 ):  # pylint: disable=too-many-arguments
     """Dismissing stale Clang-Tidy requests for changes"""
 
@@ -495,12 +496,12 @@ def dismiss_change_requests(
         # Avoid triggering abuse detection
         time.sleep(10)
 
-    resolve_conversations(
-        github_token=github_token,
-        repo=repo,
-        pull_request_id=pull_request_id,
-        warning_comment_prefix=warning_comment_prefix,
-    )
+    if auto_resolve_conversations:
+        resolve_conversations(
+            github_token=github_token,
+            repo=repo,
+            pull_request_id=pull_request_id,
+        )
 
 
 def conversation_threads_to_close(repo, pr_number, github_token):
@@ -596,12 +597,7 @@ def close_conversation(repo, thread_id, github_token):
         print(f"::error::GraphQL request failed: {response.status_code}")
 
 
-def resolve_conversations(
-    github_token,
-    repo,
-    pull_request_id,
-    warning_comment_prefix,
-):
+def resolve_conversations(github_token, repo, pull_request_id):
     """Resolving stale conversations"""
     for thread in conversation_threads_to_close(repo, pull_request_id, github_token):
         close_conversation(repo=repo, thread_id=thread["id"], github_token=github_token)
@@ -647,6 +643,14 @@ def main():
         "--suggestions-per-comment",
         type=int,
         required=True,
+        help="Number of suggestions per comment",
+    )
+    parser.add_argument(
+        "--auto-resolve-conversations",
+        type=str,
+        required=False,
+        # this matches the YAML schema for the input
+        default="false",
         help="Number of suggestions per comment",
     )
 
@@ -695,6 +699,7 @@ def main():
             args.repository,
             args.pull_request_id,
             warning_comment_prefix,
+            args.auto_resolve_conversations == "true",
         )
         return 0
 

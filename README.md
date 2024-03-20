@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
-      # auto-closing conversations requires the `contents` permission
+      # OPTIONAL: auto-closing conversations requires the `contents` permission
       contents: write
     steps:
     - uses: actions/checkout@v4
@@ -156,7 +156,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
-      # auto-closing conversations requires the `contents` permission
+      # OPTIONAL: auto-closing conversations requires the `contents` permission
       contents: write
     steps:
     - uses: actions/checkout@v4
@@ -252,7 +252,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
-      # auto-closing conversations requires the `contents` permission
+      # OPTIONAL: auto-closing conversations requires the `contents` permission
       contents: write
     steps:
     - name: Download analysis results
