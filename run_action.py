@@ -79,8 +79,7 @@ def get_pull_request_files(
         if not chunk:
             break
 
-        for item in chunk:
-            yield item
+        yield from chunk
 
 
 def get_pull_request_comments(
@@ -106,8 +105,7 @@ def get_pull_request_comments(
         if not chunk:
             break
 
-        for item in chunk:
-            yield item
+        yield from chunk
 
 
 def generate_review_comments(
