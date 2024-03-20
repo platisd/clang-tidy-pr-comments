@@ -565,7 +565,10 @@ def conversation_threads_to_close(repo, pr_number, github_token, github_api_time
                     yield thread
                     break
     else:
-        print("Error getting unresolved conversation threads:", response.status_code)
+        print(
+            f"::error::getting unresolved conversation threads: {response.status_code}"
+        )
+        raise RuntimeError("Failed to get unresolved conversation threads.")
 
 
 def close_conversation(thread_id, github_token, github_api_timeout):
@@ -609,6 +612,7 @@ def close_conversation(thread_id, github_token, github_api_timeout):
         "::error:: Failed to close conversation. See log for details and"
         "https://github.com/platisd/clang-tidy-pr-comments/blob/master/README.md for help"
     )
+    raise RuntimeError("Failed to close conversation.")
 
 
 def resolve_conversations(github_token, repo, pull_request_id, github_api_timeout):
