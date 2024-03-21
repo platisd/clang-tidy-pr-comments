@@ -609,7 +609,7 @@ def close_conversation(thread_id, github_token, github_api_timeout):
     else:
         print(f"::error::GraphQL request failed: {response.status_code}")
     print(
-        "::error:: Failed to close conversation. See log for details and"
+        "::error:: Failed to close conversation. See log for details and "
         "https://github.com/platisd/clang-tidy-pr-comments/blob/master/README.md for help"
     )
     raise RuntimeError("Failed to close conversation.")
