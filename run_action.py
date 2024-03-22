@@ -672,9 +672,8 @@ def main():
     parser.add_argument(
         "--auto-resolve-conversations",
         type=str,
-        required=False,
-        # this matches the YAML schema for the input
-        default="false",
+        required=True,
+        help="If 'true', then close any discussions opened by the Action",
         help="Number of suggestions per comment",
     )
 
