@@ -547,28 +547,25 @@ def conversation_threads_to_close(repo, pr_number, github_token, github_api_time
         timeout=github_api_timeout,
     )
 
-    if response.status_code == 200:
-        data = response.json()
-
-        # Iterate through review threads
-        for thread in data["data"]["repository"]["pullRequest"]["reviewThreads"][
-            "nodes"
-        ]:
-            for comment in thread["comments"]["nodes"]:
-                if (
-                    comment["id"]
-                    and thread["isResolved"] is False
-                    # this actor here is somehow different from `github-actions[bot]`
-                    # which we get through the Rest API
-                    and comment["author"]["login"] == "github-actions"
-                ):
-                    yield thread
-                    break
-    else:
+    if response.status_code != 200:
         print(
             f"::error::getting unresolved conversation threads: {response.status_code}"
         )
         raise RuntimeError("Failed to get unresolved conversation threads.")
+
+    data = response.json()
+    # Iterate through review threads
+    for thread in data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]:
+        for comment in thread["comments"]["nodes"]:
+            if (
+                comment["id"]
+                and thread["isResolved"] is False
+                # this actor here is somehow different from `github-actions[bot]`
+                # which we get through the Rest API
+                and comment["author"]["login"] == "github-actions"
+            ):
+                yield thread
+                break
 
 
 def close_conversation(thread_id, github_token, github_api_timeout):
