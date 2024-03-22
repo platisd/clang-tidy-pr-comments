@@ -608,25 +608,25 @@ def close_conversation(thread_id, github_token, github_api_timeout):
         timeout=github_api_timeout,
     )
 
-    if response.status_code == 200:
-        if "errors" in response.json():
-            msg = response.json()["errors"][0]["message"]
-            if "Resource not accessible by integration" in msg:
-                print(
-                    "::error::Closing conversations requires `contents: write` permission."
-                )
-            else:
-                print(f"::error::Closing conversation query failed: {msg}")
-        else:
-            print("Conversation closed successfully.")
-            return
-    else:
-        print(f"::error::GraphQL request failed: {response.status_code}")
-    print(
-        "::error:: Failed to close conversation. See log for details and "
-        "https://github.com/platisd/clang-tidy-pr-comments/blob/master/README.md for help"
-    )
-    raise RuntimeError("Failed to close conversation.")
+    def _print_error_and_raise(msg):
+        print(
+            f"::error::{msg}"
+            "::error:: Failed to close conversation. See log for details and "
+            "https://github.com/platisd/clang-tidy-pr-comments/blob/master/README.md for help"
+        )
+        raise RuntimeError("Failed to close conversation.")
+
+    if response.status_code != 200:
+        _print_error_and_raise(f"GraphQL request failed: {response.status_code}")
+
+    if "errors" in response.json():
+        error_msg = response.json()["errors"][0]["message"]
+        _print_error_and_raise(
+            "Closing conversations requires `contents: write` permission."
+            if "Resource not accessible by integration" in error_msg
+            else f"Closing conversation query failed: {error_msg}"
+        )
+    print("Conversation closed successfully.")
 
 
 def resolve_conversations(
