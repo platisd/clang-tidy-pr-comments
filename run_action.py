@@ -671,7 +671,6 @@ def main():
         type=str,
         required=True,
         help="If 'true', then close any discussions opened by the Action",
-        help="Number of suggestions per comment",
     )
 
     args = parser.parse_args()
