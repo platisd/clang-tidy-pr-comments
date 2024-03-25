@@ -455,6 +455,7 @@ def dismiss_change_requests(
     pull_request_id,
     warning_comment_prefix,
     auto_resolve_conversations,
+    single_comment_marker,
 ):  # pylint: disable=too-many-arguments
     """Dismissing stale Clang-Tidy requests for changes"""
 
@@ -510,7 +511,7 @@ def dismiss_change_requests(
             repo=repo,
             pull_request_id=pull_request_id,
             github_api_timeout=github_api_timeout,
-            single_comment_marker=warning_comment_prefix,
+            single_comment_marker=single_comment_marker,
         )
 
 
@@ -740,8 +741,9 @@ def main():
             github_api_timeout,
             args.repository,
             args.pull_request_id,
-            warning_comment_prefix,
-            args.auto_resolve_conversations == "true",
+            warning_comment_prefix=warning_comment_prefix,
+            auto_resolve_conversations=args.auto_resolve_conversations == "true",
+            single_comment_marker=single_comment_marker,
         )
         return 0
 
