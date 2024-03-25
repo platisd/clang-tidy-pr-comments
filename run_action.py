@@ -197,7 +197,8 @@ def generate_review_comments(
             "path": file_path,
             "line": end_line_num,
             "side": "RIGHT",
-            "body": f"{single_comment_marker} **{markdown(name)}** {single_comment_marker}\n{markdown(message)}",
+            "body": f"{single_comment_marker} **{markdown(name)}** {single_comment_marker}\n"
+            + markdown(message),
         }
 
         if start_line_num != end_line_num:
