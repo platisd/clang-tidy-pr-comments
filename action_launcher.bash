@@ -28,4 +28,5 @@ cd "$recreated_repo_dir"
   --repository "$GITHUB_REPOSITORY" \
   --repository-root "$recreated_repo_dir" \
   --request-changes "$INPUT_REQUEST_CHANGES" \
-  --suggestions-per-comment "$INPUT_SUGGESTIONS_PER_COMMENT"
+  --suggestions-per-comment "$INPUT_SUGGESTIONS_PER_COMMENT" \
+  --auto-resolve-conversations "$INPUT_AUTO_RESOLVE_CONVERSATIONS" \
