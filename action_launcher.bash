@@ -29,4 +29,4 @@ cd "$recreated_repo_dir"
   --repository-root "$recreated_repo_dir" \
   --request-changes "$INPUT_REQUEST_CHANGES" \
   --suggestions-per-comment "$INPUT_SUGGESTIONS_PER_COMMENT" \
-  --auto-resolve-conversations "$INPUT_AUTO_RESOLVE_CONVERSATIONS" \
+  --auto-resolve-conversations "$INPUT_AUTO_RESOLVE_CONVERSATIONS"
