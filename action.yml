@@ -37,12 +37,18 @@ runs:
         python-version: 3.11
         update-environment: false
     - name: Setup venv
+      env:
+        BASH_ENV: ""
+        PYTHONWARNINGS: ""
       run: |
         "${{ steps.setup-python.outputs.python-path }}" -m venv "${GITHUB_ACTION_PATH}/venv"
       shell: bash
     - name: Install dependencies
       run: |
         "${GITHUB_ACTION_PATH}/venv/bin/python" -m pip install -r "${GITHUB_ACTION_PATH}/requirements.txt"
+      env:
+        BASH_ENV: ""
+        PYTHONWARNINGS: ""
       shell: bash
     - name: Run action
       run: |
@@ -56,6 +62,8 @@ runs:
         INPUT_SUGGESTIONS_PER_COMMENT: ${{ inputs.suggestions_per_comment }}
         INPUT_REPO_PATH_PREFIX: ${{ inputs.repo_path_prefix }}
         INPUT_AUTO_RESOLVE_CONVERSATIONS: ${{ inputs.auto_resolve_conversations }}
+        BASH_ENV: ""
+        PYTHONWARNINGS: ""
 branding:
   icon: 'cpu'
   color: 'green'
