@@ -8,6 +8,9 @@
 [![clang-tidy-13 support]](https://releases.llvm.org/13.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
 [![clang-tidy-14 support]](https://releases.llvm.org/14.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
 [![clang-tidy-15 support]](https://releases.llvm.org/15.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-16 support]](https://releases.llvm.org/16.0.0/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-17 support]](https://releases.llvm.org/17.0.1/tools/clang/tools/extra/docs/clang-tidy/index.html)
+[![clang-tidy-18 support]](https://releases.llvm.org/18.1.1/tools/clang/tools/extra/docs/clang-tidy/index.html)
 
 A GitHub Action to post `clang-tidy` warnings and suggestions as review comments on your pull request.
 
@@ -76,6 +79,9 @@ YAML files containing generated fixes by the following `clang-tidy` versions are
 * `clang-tidy-13`
 * `clang-tidy-14`
 * `clang-tidy-15`
+* `clang-tidy-16`
+* `clang-tidy-17`
+* `clang-tidy-18`
 
 ## How
 
@@ -344,3 +350,6 @@ See the [Action dependency graph](https://github.com/platisd/clang-tidy-pr-comme
 [clang-tidy-13 support]: https://img.shields.io/badge/clang--tidy-13-green
 [clang-tidy-14 support]: https://img.shields.io/badge/clang--tidy-14-green
 [clang-tidy-15 support]: https://img.shields.io/badge/clang--tidy-15-green
+[clang-tidy-16 support]: https://img.shields.io/badge/clang--tidy-16-green
+[clang-tidy-17 support]: https://img.shields.io/badge/clang--tidy-17-green
+[clang-tidy-18 support]: https://img.shields.io/badge/clang--tidy-18-green
