@@ -189,7 +189,7 @@ def generate_review_comments(
         message,
         single_comment_marker,
         replacement_text=None,
-    ):  # pylint: disable=too-many-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         result = {
             "path": file_path,
             "line": end_line_num,
@@ -413,7 +413,7 @@ def post_review_comments(
     review_event,
     review_comments,
     suggestions_per_comment,
-):  # pylint: disable=too-many-arguments
+):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """Sending the Clang-Tidy review comments to GitHub"""
 
     def split_into_chunks(lst, n):
@@ -468,7 +468,7 @@ def dismiss_change_requests(
     warning_comment_prefix,
     auto_resolve_conversations,
     single_comment_marker,
-):  # pylint: disable=too-many-arguments
+):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """Dismissing stale Clang-Tidy requests for changes"""
 
     print("Checking if there are any stale requests for changes to dismiss...")
