@@ -123,10 +123,7 @@ def generate_review_comments(
     def validate_warning_applicability(
         diff_line_ranges_per_file, file_path, start_line_num, end_line_num
     ):
-        assert end_line_num >= start_line_num
-
-        if file_path not in diff_line_ranges_per_file:
-            return False
+        assert end_line_num >= start_line_num and file_path in diff_line_ranges_per_file
 
         for line_range in diff_line_ranges_per_file[file_path]:
             assert line_range.step == 1
@@ -243,6 +240,13 @@ def generate_review_comments(
         if not diag_message["Replacements"]:
             file_path = diag_message["FilePath"]
             offset = diag_message["FileOffset"]
+
+            if file_path not in diff_line_ranges_per_file:
+                print(
+                    f"'{diag_name}' in {file_path} does not apply to the files changed in this PR"
+                )
+                continue
+
             line_num = get_line_by_offset(repository_root, file_path, offset)
 
             print(f"Processing '{diag_name}' at line {line_num:d} of {file_path}...")
@@ -264,6 +268,13 @@ def generate_review_comments(
             diag_message_replacements = diag_message["Replacements"]
 
             for file_path in {item["FilePath"] for item in diag_message_replacements}:
+                if file_path not in diff_line_ranges_per_file:
+                    # pylint: disable=line-too-long
+                    print(
+                        f"'{diag_name}' in {file_path} does not apply to the files changed in this PR"
+                    )
+                    continue
+
                 line_num = 1
                 start_line_num = None
                 end_line_num = None
