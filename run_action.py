@@ -243,7 +243,7 @@ def generate_review_comments(
 
             if file_path not in diff_line_ranges_per_file:
                 print(
-                    f"'{diag_name}' in {file_path} does not apply to the files changed in this PR"
+                    f"'{diag_name}' for {file_path} does not apply to the files changed in this PR"
                 )
                 continue
 
@@ -271,7 +271,7 @@ def generate_review_comments(
                 if file_path not in diff_line_ranges_per_file:
                     # pylint: disable=line-too-long
                     print(
-                        f"'{diag_name}' in {file_path} does not apply to the files changed in this PR"
+                        f"'{diag_name}' for {file_path} does not apply to the files changed in this PR"
                     )
                     continue
 
