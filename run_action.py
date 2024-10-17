@@ -123,7 +123,7 @@ def generate_review_comments(
     def validate_warning_applicability(
         diff_line_ranges_per_file, file_path, start_line_num, end_line_num
     ):
-        assert end_line_num >= start_line_num and file_path in diff_line_ranges_per_file
+        assert end_line_num >= start_line_num
 
         for line_range in diff_line_ranges_per_file[file_path]:
             assert line_range.step == 1
