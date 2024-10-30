@@ -27,10 +27,15 @@ inputs:
     description: 'Automatically resolve conversations when the clang-tidy issues are fixed'
     required: false
     default: 'false'
+  python_path:
+    description: 'Path to a Python executable to use; if not set Python will be installed locally'
+    required: false
+    default: ''
 runs:
   using: 'composite'
   steps:
     - name: Setup Python
+      if: ${{ !inputs.python_path }}
       uses: actions/setup-python@v5
       id: setup-python
       with:
@@ -38,7 +43,7 @@ runs:
         update-environment: false
     - name: Setup venv
       run: |
-        "${{ steps.setup-python.outputs.python-path }}" -m venv "${GITHUB_ACTION_PATH}/venv"
+        "${{ steps.setup-python.outputs.python-path || inputs.python_path }}" -m venv "${GITHUB_ACTION_PATH}/venv"
       shell: bash
     - name: Install dependencies
       run: |

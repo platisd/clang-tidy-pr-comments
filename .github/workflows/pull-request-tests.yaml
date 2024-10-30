@@ -38,3 +38,31 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           request_changes: false
           clang_tidy_fixes: build/fixes.yaml
+  check-action-with-custom-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        id: setup-python
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          pip install clang-tidy==${CLANG_TIDY_VERSION} cmake==${CMAKE_VERSION}
+      - name: Configure Test project
+        run: |
+          mkdir build
+          cd build
+          cmake ../tests
+      - name: Run clang-tidy
+        run: |
+          cd build
+          cmake --build . --target clang-tidy
+      - name: Test Suggest Fixes
+        uses: ./
+        with:
+          # Use existing Python installation instead of installing a new one
+          python_path: ${{ steps.setup-python.outputs.python-path }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          request_changes: false
+          clang_tidy_fixes: build/fixes.yaml
