@@ -49,6 +49,8 @@ runs:
       run: |
         "${GITHUB_ACTION_PATH}/venv/bin/python" -m pip install -r "${GITHUB_ACTION_PATH}/requirements.txt"
       shell: bash
+    - name: Install jq
+      uses: dcarbone/install-jq-action@v2.1.0
     - name: Run action
       run: |
         "${GITHUB_ACTION_PATH}/action_launcher.bash"
