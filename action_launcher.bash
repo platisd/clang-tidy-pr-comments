@@ -2,15 +2,13 @@
 
 set -eu
 
-if [ -z "$INPUT_PULL_REQUEST_ID" ]; then
-  pull_request_id="$(jq "if (.issue.number != null) then .issue.number else .number end" < "$GITHUB_EVENT_PATH")"
-
-  if [ "$pull_request_id" == "null" ]; then
-    echo "Could not find the pull request ID. Is this a pull request?"
-    exit 0
-  fi
-else
+if [ -n "$INPUT_PULL_REQUEST_ID" ]; then
   pull_request_id="$INPUT_PULL_REQUEST_ID"
+elif [ -n "$PULL_REQUEST_ID" ]; then
+  pull_request_id="$PULL_REQUEST_ID"
+else
+  echo "Could not find the pull request ID. Is this a pull request?"
+  exit 0
 fi
 
 repository_name="$(basename "$GITHUB_REPOSITORY")"
