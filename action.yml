@@ -61,6 +61,7 @@ runs:
         INPUT_SUGGESTIONS_PER_COMMENT: ${{ inputs.suggestions_per_comment }}
         INPUT_REPO_PATH_PREFIX: ${{ inputs.repo_path_prefix }}
         INPUT_AUTO_RESOLVE_CONVERSATIONS: ${{ inputs.auto_resolve_conversations }}
+        PULL_REQUEST_ID: ${{ github.event.issue.number || github.event.number || '' }}
 branding:
   icon: 'cpu'
   color: 'green'
