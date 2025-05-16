@@ -670,6 +670,23 @@ def resolve_conversations(
         )
 
 
+def reorder_diagnostics(diags):
+    """
+    order diagnostics by level: first error, then warning, then remark
+    """
+    errors = [d for d in diags if d["Level"] == "Error"]
+    warnings = [d for d in diags if d["Level"] == "Warning"]
+    remarks = [d for d in diags if d["Level"] == "Remark"]
+    others = [d for d in diags if d["Level"] not in {"Error", "Warning", "Remark"}]
+
+    if others:
+        print(
+            "WARNING: some fixes have an unexpected Level (e.g. not Error, Warning, Remark)"
+        )
+
+    return errors + warnings + remarks + others
+
+
 def main():
     """Entry point"""
 
@@ -774,6 +791,10 @@ def main():
             single_comment_markers=single_comment_markers,
         )
         return 0
+
+    clang_tidy_fixes["Diagnostics"] = reorder_diagnostics(
+        clang_tidy_fixes["Diagnostics"]
+    )
 
     review_comments = list(
         generate_review_comments(
