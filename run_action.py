@@ -109,7 +109,7 @@ def get_pull_request_comments(
 
 
 def generate_review_comments(
-    clang_tidy_fixes, repository_root, diff_line_ranges_per_file, single_comment_marker
+    clang_tidy_fixes, repository_root, diff_line_ranges_per_file, single_comment_markers
 ):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """Generator of the Clang-Tidy review comments"""
 
@@ -236,6 +236,11 @@ def generate_review_comments(
 
         diag_name = diag["DiagnosticName"]
         diag_message_msg = diag_message["Message"]
+
+        if diag["Level"] in single_comment_markers:
+            single_comment_marker = single_comment_markers[diag["Level"]]
+        else:
+            single_comment_marker = single_comment_markers["fallback"]
 
         if not diag_message["Replacements"]:
             file_path = diag_message["FilePath"]
@@ -467,7 +472,7 @@ def dismiss_change_requests(
     pull_request_id,
     warning_comment_prefix,
     auto_resolve_conversations,
-    single_comment_marker,
+    single_comment_markers,
 ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """Dismissing stale Clang-Tidy requests for changes"""
 
@@ -523,12 +528,12 @@ def dismiss_change_requests(
             repo=repo,
             pull_request_id=pull_request_id,
             github_api_timeout=github_api_timeout,
-            single_comment_marker=single_comment_marker,
+            single_comment_markers=single_comment_markers,
         )
 
 
 def conversation_threads_to_close(
-    repo, pr_number, github_token, github_api_timeout, single_comment_marker
+    repo, pr_number, github_token, github_api_timeout, single_comment_markers
 ):
     """Generator of unresolved conversation threads to close
 
@@ -580,11 +585,15 @@ def conversation_threads_to_close(
         raise RuntimeError("Failed to get unresolved conversation threads.")
 
     data = response.json()
-    # a regex that matches the start of a single comment
-    single_comment_marker = re.escape(single_comment_marker)
-    comment_matcher = re.compile(
-        f"^{single_comment_marker}.*{single_comment_marker}.*", re.DOTALL
-    )
+
+    # list of regexes that matches comments with repeated marker emojis
+    marker_matches = []
+    for single_comment_marker in single_comment_markers.values():
+        single_comment_marker = re.escape(single_comment_marker)
+        comment_matcher = re.compile(
+            f"^{single_comment_marker}.*{single_comment_marker}.*", re.DOTALL
+        )
+        marker_matches.append(comment_matcher)
 
     # Iterate through review threads
     for thread in data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]:
@@ -595,7 +604,9 @@ def conversation_threads_to_close(
                 # this actor here is somehow different from `github-actions[bot]`
                 # which we get through the Rest API
                 and comment["author"]["login"] == "github-actions"
-                and comment_matcher.match(comment["body"].strip())
+                and any(
+                    matcher.match(comment["body"].strip()) for matcher in marker_matches
+                )
             ):
                 yield thread
                 break
@@ -646,11 +657,11 @@ def close_conversation(thread_id, github_token, github_api_timeout):
 
 
 def resolve_conversations(
-    github_token, repo, pull_request_id, github_api_timeout, single_comment_marker
+    github_token, repo, pull_request_id, github_api_timeout, single_comment_markers
 ):
     """Resolving stale conversations"""
     for thread in conversation_threads_to_close(
-        repo, pull_request_id, github_token, github_api_timeout, single_comment_marker
+        repo, pull_request_id, github_token, github_api_timeout, single_comment_markers
     ):
         close_conversation(
             thread_id=thread["id"],
@@ -719,7 +730,12 @@ def main():
     warning_comment_prefix = (
         ":warning: `Clang-Tidy` found issue(s) with the introduced code"
     )
-    single_comment_marker = ":warning:"
+    single_comment_markers = {
+        "Error": ":x:",
+        "Warning": ":warning:",
+        "Remark": ":speech_balloon:",
+        "fallback": ":grey_question:",
+    }
 
     diff_line_ranges_per_file = get_diff_line_ranges_per_file(
         get_pull_request_files(
@@ -755,7 +771,7 @@ def main():
             args.pull_request_id,
             warning_comment_prefix=warning_comment_prefix,
             auto_resolve_conversations=args.auto_resolve_conversations == "true",
-            single_comment_marker=single_comment_marker,
+            single_comment_markers=single_comment_markers,
         )
         return 0
 
@@ -764,7 +780,7 @@ def main():
             clang_tidy_fixes,
             args.repository_root + "/",
             diff_line_ranges_per_file,
-            single_comment_marker=single_comment_marker,
+            single_comment_markers=single_comment_markers,
         )
     )
 
