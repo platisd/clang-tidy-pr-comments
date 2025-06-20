@@ -181,6 +181,24 @@ def generate_review_comments(
 
         return s
 
+    def markdown_url(label: str, url: str) -> str:
+        return f"[{label}]({url})"
+
+    def diagnostic_name_visual(diagnostic_name: str) -> str:
+        visual = f"**{markdown(diagnostic_name)}**"
+
+        try:
+            first_dash_idx = diagnostic_name.index("-")
+        except ValueError:
+            return visual
+
+        namespace = diagnostic_name[:first_dash_idx]
+        check_name = diagnostic_name[first_dash_idx + 1 :]
+        return markdown_url(
+            visual,
+            f"https://clang.llvm.org/extra/clang-tidy/checks/{namespace}/{check_name}.html",
+        )
+
     def generate_single_comment(
         file_path,
         start_line_num,
@@ -194,7 +212,7 @@ def generate_review_comments(
             "path": file_path,
             "line": end_line_num,
             "side": "RIGHT",
-            "body": f"{single_comment_marker} **{markdown(name)}** {single_comment_marker}\n"
+            "body": f"{single_comment_marker} {diagnostic_name_visual(name)} {single_comment_marker}\n"
             + markdown(message),
         }
 
