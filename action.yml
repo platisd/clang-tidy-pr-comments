@@ -34,21 +34,29 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: OK0
+      run: echo ok0
     - name: Setup Python
       if: ${{ !inputs.python_path }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5.6.0
       id: setup-python
       with:
         python-version: 3.11
         update-environment: false
+    - name: OK1
+      run: echo ok1
     - name: Setup venv
       run: |
         "${{ steps.setup-python.outputs.python-path || inputs.python_path }}" -m venv "${GITHUB_ACTION_PATH}/venv"
       shell: bash
+    - name: OK2
+      run: echo ok2
     - name: Install dependencies
       run: |
         "${GITHUB_ACTION_PATH}/venv/bin/python" -m pip install -r "${GITHUB_ACTION_PATH}/requirements.txt"
       shell: bash
+    - name: OK3
+      run: echo ok3
     - name: Run action
       run: |
         "${GITHUB_ACTION_PATH}/action_launcher.bash"
