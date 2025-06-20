@@ -45,7 +45,7 @@ runs:
         python-version: 3.11
         update-environment: false
     - name: OK1
-      run: echo ok1
+      run: cat "${{ steps.setup-python.outputs.python-path || inputs.python_path }}"
       shell: bash
     - name: Setup venv
       run: |
