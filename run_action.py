@@ -10,6 +10,7 @@ import posixpath
 import re
 import sys
 import time
+import urllib.parse
 
 import requests
 import yaml
@@ -192,8 +193,8 @@ def generate_review_comments(
         except ValueError:
             return visual
 
-        namespace = diagnostic_name[:first_dash_idx]
-        check_name = diagnostic_name[first_dash_idx + 1 :]
+        namespace = urllib.parse.quote_plus(diagnostic_name[:first_dash_idx])
+        check_name = urllib.parse.quote_plus(diagnostic_name[first_dash_idx + 1 :])
         return markdown_url(
             visual,
             f"https://clang.llvm.org/extra/clang-tidy/checks/{namespace}/{check_name}.html",
