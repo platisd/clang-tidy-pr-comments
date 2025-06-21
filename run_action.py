@@ -181,10 +181,10 @@ def generate_review_comments(
 
         return s
 
-    def markdown_url(label: str, url: str) -> str:
-        return f"[{label}]({url})"
+    def markdown_url(label, url):
+        return f'<a href="{url}" target="_blank" rel="noopener noreferrer">{label}</a>'
 
-    def diagnostic_name_visual(diagnostic_name: str) -> str:
+    def diagnostic_name_visual(diagnostic_name):
         visual = f"**{markdown(diagnostic_name)}**"
 
         try:
