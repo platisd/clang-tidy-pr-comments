@@ -208,7 +208,7 @@ def generate_review_comments(
         message,
         single_comment_marker,
         replacement_text=None,
-    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    ):  # pylint: disable=too-many-arguments,too-many-positional-arguments,line-too-long
         result = {
             "path": file_path,
             "line": end_line_num,
