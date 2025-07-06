@@ -616,10 +616,11 @@ def conversation_threads_to_close(
 
     # Iterate through review threads
     for thread in data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]:
+        if thread["isResolved"]:
+            continue
         for comment in thread["comments"]["nodes"]:
             if (
                 comment["id"]
-                and thread["isResolved"] is False
                 # this actor here is somehow different from `github-actions[bot]`
                 # which we get through the Rest API
                 and comment["author"]["login"] == "github-actions"
