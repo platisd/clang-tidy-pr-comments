@@ -540,19 +540,22 @@ def dismiss_change_requests(
         time.sleep(10)
 
 
+# pylint: disable=too-many-locals, too-many-arguments, too-many-positional-arguments
 def conversation_threads_to_close(
     repo,
     pr_number,
     github_token,
     github_api_timeout,
     single_comment_markers,
-    comment_paths,
+    comment_paths=None,
 ):
     """Generator of unresolved conversation threads to close
 
     Uses the GitHub GraphQL API to get conversation threads for the given PR.
     Then filters for unresolved threads and those that have been created by the action.
     """
+    if comment_paths is None:
+        comment_paths = set()
 
     repo_owner, repo_name = repo.split("/")
     query = """
@@ -673,13 +676,14 @@ def close_conversation(thread_id, github_token, github_api_timeout):
     print("Conversation closed successfully.")
 
 
+# pylint: disable=too-many-arguments, too-many-positional-arguments
 def resolve_conversations(
     github_token,
     repo,
     pull_request_id,
     github_api_timeout,
     single_comment_markers,
-    comment_paths,
+    comment_paths=None,
 ):
     """Resolving stale conversations"""
     for thread in conversation_threads_to_close(
@@ -688,7 +692,7 @@ def resolve_conversations(
         github_token,
         github_api_timeout,
         single_comment_markers,
-        comment_paths,
+        comment_paths=comment_paths,
     ):
         close_conversation(
             thread_id=thread["id"],
@@ -822,7 +826,6 @@ def main():
                 pull_request_id=args.pull_request_id,
                 github_api_timeout=github_api_timeout,
                 single_comment_markers=single_comment_markers,
-                comment_paths=set(),
             )
         return 0
 
