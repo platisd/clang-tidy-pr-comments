@@ -490,8 +490,6 @@ def dismiss_change_requests(
     repo,
     pull_request_id,
     warning_comment_prefix,
-    auto_resolve_conversations,
-    single_comment_markers,
 ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """Dismissing stale Clang-Tidy requests for changes"""
 
@@ -541,18 +539,14 @@ def dismiss_change_requests(
         # Avoid triggering abuse detection
         time.sleep(10)
 
-    if auto_resolve_conversations:
-        resolve_conversations(
-            github_token=github_token,
-            repo=repo,
-            pull_request_id=pull_request_id,
-            github_api_timeout=github_api_timeout,
-            single_comment_markers=single_comment_markers,
-        )
-
 
 def conversation_threads_to_close(
-    repo, pr_number, github_token, github_api_timeout, single_comment_markers
+    repo,
+    pr_number,
+    github_token,
+    github_api_timeout,
+    single_comment_markers,
+    comment_paths,
 ):
     """Generator of unresolved conversation threads to close
 
@@ -577,6 +571,7 @@ def conversation_threads_to_close(
                   author {
                     login
                   }
+                  path
                 }
               }
             }
@@ -627,6 +622,8 @@ def conversation_threads_to_close(
                 and any(
                     matcher.match(comment["body"].strip()) for matcher in marker_matches
                 )
+                # if the file does not have any comment, we can safely close any conversation
+                and comment["path"] not in comment_paths
             ):
                 yield thread
                 break
@@ -677,11 +674,21 @@ def close_conversation(thread_id, github_token, github_api_timeout):
 
 
 def resolve_conversations(
-    github_token, repo, pull_request_id, github_api_timeout, single_comment_markers
+    github_token,
+    repo,
+    pull_request_id,
+    github_api_timeout,
+    single_comment_markers,
+    comment_paths,
 ):
     """Resolving stale conversations"""
     for thread in conversation_threads_to_close(
-        repo, pull_request_id, github_token, github_api_timeout, single_comment_markers
+        repo,
+        pull_request_id,
+        github_token,
+        github_api_timeout,
+        single_comment_markers,
+        comment_paths,
     ):
         close_conversation(
             thread_id=thread["id"],
@@ -807,9 +814,16 @@ def main():
             args.repository,
             args.pull_request_id,
             warning_comment_prefix=warning_comment_prefix,
-            auto_resolve_conversations=args.auto_resolve_conversations == "true",
-            single_comment_markers=single_comment_markers,
         )
+        if args.auto_resolve_conversations == "true":
+            resolve_conversations(
+                github_token=github_token,
+                repo=args.repository,
+                pull_request_id=args.pull_request_id,
+                github_api_timeout=github_api_timeout,
+                single_comment_markers=single_comment_markers,
+                comment_paths=set(),
+            )
         return 0
 
     clang_tidy_fixes["Diagnostics"] = reorder_diagnostics(
@@ -824,6 +838,16 @@ def main():
             single_comment_markers=single_comment_markers,
         )
     )
+    if args.auto_resolve_conversations == "true":
+        comment_paths = set(comment["path"] for comment in review_comments)
+        resolve_conversations(
+            github_token=github_token,
+            repo=args.repository,
+            pull_request_id=args.pull_request_id,
+            github_api_timeout=github_api_timeout,
+            single_comment_markers=single_comment_markers,
+            comment_paths=comment_paths,
+        )
 
     existing_pull_request_comments = list(
         get_pull_request_comments(
