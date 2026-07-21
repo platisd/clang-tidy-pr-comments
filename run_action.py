@@ -634,8 +634,7 @@ def conversation_threads_to_close(
 
 def close_conversation(thread_id, github_token, github_api_timeout):
     """Close a conversation thread using the GitHub GraphQL API"""
-    mutation = (
-        """
+    mutation = """
     mutation {
       resolveReviewThread(input: {threadId: "%s", clientMutationId: "github-actions"}) {
         thread {
@@ -643,9 +642,7 @@ def close_conversation(thread_id, github_token, github_api_timeout):
         }
       }
     }
-    """
-        % thread_id
-    )
+    """ % thread_id
 
     print(f"::debug::Closing conversation {thread_id}...")
     response = requests.post(
